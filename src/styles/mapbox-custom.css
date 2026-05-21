@@ -1,0 +1,140 @@
+/* Estilos customizados para Mapbox - GeoParques SM */
+
+/* Controles de navegação */
+.mapboxgl-ctrl-group {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  border: 2px solid rgba(20, 184, 166, 0.3) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(20, 184, 166, 0.2) !important;
+  backdrop-filter: blur(12px);
+}
+
+.mapboxgl-ctrl-group button {
+  background-color: transparent !important;
+  border: none !important;
+  transition: all 0.2s;
+}
+
+.mapboxgl-ctrl-group button:hover {
+  background-color: rgba(20, 184, 166, 0.2) !important;
+}
+
+.mapboxgl-ctrl-icon {
+  filter: invert(1) hue-rotate(130deg) brightness(1.2);
+}
+
+.mapboxgl-ctrl-zoom-in .mapboxgl-ctrl-icon,
+.mapboxgl-ctrl-zoom-out .mapboxgl-ctrl-icon {
+  background-image: none !important;
+}
+
+.mapboxgl-ctrl-zoom-in .mapboxgl-ctrl-icon::before {
+  content: '+';
+  font-size: 24px;
+  font-weight: bold;
+  color: #14b8a6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.mapboxgl-ctrl-zoom-out .mapboxgl-ctrl-icon::before {
+  content: '−';
+  font-size: 24px;
+  font-weight: bold;
+  color: #14b8a6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.mapboxgl-ctrl-compass .mapboxgl-ctrl-icon {
+  filter: brightness(0) invert(1);
+  opacity: 0.7;
+}
+
+/* Popup */
+.mapboxgl-popup-content {
+  background-color: rgba(15, 23, 42, 0.98) !important;
+  color: white !important;
+  border-radius: 16px !important;
+  border: 2px solid rgba(20, 184, 166, 0.3) !important;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(20, 184, 166, 0.2) !important;
+  backdrop-filter: blur(12px);
+  padding: 16px !important;
+}
+
+.mapboxgl-popup-tip {
+  border-top-color: rgba(15, 23, 42, 0.98) !important;
+  border-bottom-color: rgba(15, 23, 42, 0.98) !important;
+}
+
+.mapboxgl-popup-close-button {
+  color: #14b8a6 !important;
+  font-size: 24px !important;
+  padding: 8px 12px !important;
+  transition: all 0.2s;
+}
+
+.mapboxgl-popup-close-button:hover {
+  color: #5eead4 !important;
+  background-color: rgba(20, 184, 166, 0.1) !important;
+}
+
+/* Attribution */
+.mapboxgl-ctrl-attrib {
+  background-color: rgba(15, 23, 42, 0.8) !important;
+  color: rgba(148, 163, 184, 0.8) !important;
+  font-size: 10px !important;
+  border-radius: 8px !important;
+  padding: 4px 8px !important;
+  backdrop-filter: blur(8px);
+}
+
+.mapboxgl-ctrl-attrib a {
+  color: #14b8a6 !important;
+}
+
+.mapboxgl-ctrl-logo {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.mapboxgl-ctrl-logo:hover {
+  opacity: 1;
+}
+
+/* Controle de escala */
+.mapboxgl-ctrl-scale {
+  background-color: rgba(15, 23, 42, 0.8) !important;
+  color: #14b8a6 !important;
+  border: 2px solid rgba(20, 184, 166, 0.3) !important;
+  border-top: none !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  backdrop-filter: blur(8px);
+}
+
+/* Marcadores customizados - prevenir movimento */
+.mapboxgl-marker {
+  will-change: transform;
+  pointer-events: auto !important;
+}
+
+.custom-mapbox-marker {
+  pointer-events: auto !important;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.mapboxgl-canvas-container.mapboxgl-interactive,
+.mapboxgl-canvas-container.mapboxgl-touch-drag-pan {
+  cursor: grab;
+}
+
+.mapboxgl-canvas-container.mapboxgl-interactive:active,
+.mapboxgl-canvas-container.mapboxgl-touch-drag-pan:active {
+  cursor: grabbing;
+}
