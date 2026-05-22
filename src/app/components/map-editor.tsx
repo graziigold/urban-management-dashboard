@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MapPin, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { MapPin, Plus, Trash2, Edit2, Save, X, Link } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -20,10 +20,47 @@ const statusColors = {
   success: 'bg-green-500',
 };
 
+// ── Limites geográficos do mapa de Santa Maria-DF ──────────────────────────
+// Ajuste esses valores se o mapa estiver cortado diferente
+const MAP_BOUNDS = {
+  latMin: -16.075,  // borda inferior (sul)
+  latMax: -15.985,  // borda superior (norte)
+  lngMin: -48.075,  // borda esquerda (oeste)
+  lngMax: -47.990,  // borda direita (leste)
+};
+
+function latLngToPercent(lat: number, lng: number) {
+  const x = ((lng - MAP_BOUNDS.lngMin) / (MAP_BOUNDS.lngMax - MAP_BOUNDS.lngMin)) * 100;
+  const y = ((MAP_BOUNDS.latMax - lat) / (MAP_BOUNDS.latMax - MAP_BOUNDS.latMin)) * 100;
+  return {
+    lngPercent: Math.max(0, Math.min(100, Math.round(x * 100) / 100)),
+    latPercent: Math.max(0, Math.min(100, Math.round(y * 100) / 100)),
+  };
+}
+
+function extractCoordsFromGoogleUrl(url: string): { lat: number; lng: number } | null {
+  const patterns = [
+    /@(-?\d+\.\d+),(-?\d+\.\d+)/,           // maps.google.com/.../@lat,lng,zoom
+    /[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/,      // ?q=lat,lng
+    /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,          // ll=lat,lng
+    /place\/[^/]+\/@(-?\d+\.\d+),(-?\d+\.\d+)/, // /place/Nome/@lat,lng
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+    }
+  }
+  return null;
+}
+
 export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
   const [markers, setMarkers] = useState<MapMarker[]>(initialMarkers);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [isEditingMarker, setIsEditingMarker] = useState(false);
+  const [googleUrl, setGoogleUrl] = useState('');
+  const [urlError, setUrlError] = useState('');
+  const [urlSuccess, setUrlSuccess] = useState('');
   const [editForm, setEditForm] = useState({
     title: '',
     status: 'success' as 'critical' | 'warning' | 'success',
@@ -47,6 +84,40 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
     };
 
     setMarkers([...markers, newMarker]);
+    setEditForm({ ...editForm, title: '' });
+  };
+
+  // ── Adicionar pin via link do Google Maps ──────────────────────────────
+  const handleAddFromUrl = () => {
+    setUrlError('');
+    setUrlSuccess('');
+
+    const coords = extractCoordsFromGoogleUrl(googleUrl);
+
+    if (!coords) {
+      setUrlError('URL inválida. Abra o link encurtado no navegador, copie a URL completa e cole aqui.');
+      return;
+    }
+
+    const { lngPercent, latPercent } = latLngToPercent(coords.lat, coords.lng);
+
+    if (lngPercent <= 0 || lngPercent >= 100 || latPercent <= 0 || latPercent >= 100) {
+      setUrlError(`Coordenadas (${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}) estão fora da área do mapa.`);
+      return;
+    }
+
+    const newMarker: MapMarker = {
+      id: `marker-${Date.now()}`,
+      lat: latPercent,
+      lng: lngPercent,
+      status: editForm.status,
+      title: editForm.title || `Novo Ponto ${markers.length + 1}`,
+      region: editForm.region,
+    };
+
+    setMarkers([...markers, newMarker]);
+    setUrlSuccess(`✅ Pin adicionado! (${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)})`);
+    setGoogleUrl('');
     setEditForm({ ...editForm, title: '' });
   };
 
@@ -106,7 +177,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
             </Button>
           </div>
           <p className="text-sm text-gray-600">
-            Clique no mapa para adicionar pins
+            Clique no mapa ou cole um link do Google Maps
           </p>
         </div>
 
@@ -165,6 +236,45 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
                     <SelectItem value="polo-jk">Polo JK</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* ── NOVO: Campo de link do Google Maps ── */}
+              <div className="space-y-2 pt-2 border-t">
+                <Label htmlFor="google-url" className="flex items-center gap-1">
+                  <Link className="size-3" />
+                  Colar link do Google Maps
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="google-url"
+                    placeholder="https://www.google.com/maps/..."
+                    value={googleUrl}
+                    onChange={(e) => {
+                      setGoogleUrl(e.target.value);
+                      setUrlError('');
+                      setUrlSuccess('');
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddFromUrl()}
+                    className="text-xs"
+                  />
+                  <Button
+                    onClick={handleAddFromUrl}
+                    disabled={!googleUrl.trim()}
+                    size="sm"
+                    className="shrink-0"
+                  >
+                    Adicionar
+                  </Button>
+                </div>
+                {urlError && (
+                  <p className="text-xs text-red-500">{urlError}</p>
+                )}
+                {urlSuccess && (
+                  <p className="text-xs text-green-600">{urlSuccess}</p>
+                )}
+                <p className="text-xs text-gray-400">
+                  💡 Abra o link encurtado no navegador, copie a URL completa da barra de endereço e cole aqui.
+                </p>
               </div>
             </div>
           )}
