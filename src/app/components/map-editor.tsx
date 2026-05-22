@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Card } from './ui/card';
 import type { MapMarker } from './map-view';
-import mapaImage from '../../imports/WhatsApp_Image_2026-05-13_at_14.53.38.jpeg';
+import type { LocationCategory } from '../../utils/api/locations';
 
 interface MapEditorProps {
   initialMarkers: MapMarker[];
@@ -21,12 +21,11 @@ const statusColors = {
 };
 
 // ── Limites geográficos do mapa de Santa Maria-DF ──────────────────────────
-// Ajuste esses valores se o mapa estiver cortado diferente
 const MAP_BOUNDS = {
-  latMin: -16.075,  // borda inferior (sul)
-  latMax: -15.985,  // borda superior (norte)
-  lngMin: -48.075,  // borda esquerda (oeste)
-  lngMax: -47.990,  // borda direita (leste)
+  latMin: -16.075,
+  latMax: -15.985,
+  lngMin: -48.075,
+  lngMax: -47.990,
 };
 
 function latLngToPercent(lat: number, lng: number) {
@@ -40,10 +39,10 @@ function latLngToPercent(lat: number, lng: number) {
 
 function extractCoordsFromGoogleUrl(url: string): { lat: number; lng: number } | null {
   const patterns = [
-    /@(-?\d+\.\d+),(-?\d+\.\d+)/,           // maps.google.com/.../@lat,lng,zoom
-    /[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/,      // ?q=lat,lng
-    /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,          // ll=lat,lng
-    /place\/[^/]+\/@(-?\d+\.\d+),(-?\d+\.\d+)/, // /place/Nome/@lat,lng
+    /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /place\/[^/]+\/@(-?\d+\.\d+),(-?\d+\.\d+)/,
   ];
   for (const pattern of patterns) {
     const match = url.match(pattern);
@@ -65,6 +64,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
     title: '',
     status: 'success' as 'critical' | 'warning' | 'success',
     region: 'central',
+    category: 'outro' as LocationCategory,
   });
 
   const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -81,6 +81,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
       status: editForm.status,
       title: editForm.title || `Novo Ponto ${markers.length + 1}`,
       region: editForm.region,
+      category: editForm.category,
     };
 
     setMarkers([...markers, newMarker]);
@@ -95,7 +96,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
     const coords = extractCoordsFromGoogleUrl(googleUrl);
 
     if (!coords) {
-      setUrlError('URL inválida. Abra o link encurtado no navegador, copie a URL completa e cole aqui.');
+      setUrlError('URL inválida. Abra o link encurtado no navegador, copie a URL completa da barra de endereço e cole aqui.');
       return;
     }
 
@@ -113,6 +114,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
       status: editForm.status,
       title: editForm.title || `Novo Ponto ${markers.length + 1}`,
       region: editForm.region,
+      category: editForm.category,
     };
 
     setMarkers([...markers, newMarker]);
@@ -128,6 +130,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
       title: marker.title,
       status: marker.status,
       region: marker.region,
+      category: marker.category,
     });
     setIsEditingMarker(true);
   };
@@ -137,7 +140,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
 
     setMarkers(markers.map(m =>
       m.id === selectedMarker.id
-        ? { ...m, title: editForm.title, status: editForm.status, region: editForm.region }
+        ? { ...m, title: editForm.title, status: editForm.status, region: editForm.region, category: editForm.category }
         : m
     ));
     setIsEditingMarker(false);
@@ -165,9 +168,22 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
     a.click();
   };
 
+  const categoryOptions: { value: LocationCategory; label: string }[] = [
+    { value: 'parquinho', label: '🛝 Parquinho' },
+    { value: 'pec', label: '🏋️ PEC' },
+    { value: 'quadra', label: '🏀 Quadra' },
+    { value: 'campo', label: '⚽ Campo' },
+    { value: 'praca', label: '🌳 Praça' },
+    { value: 'ponto-onibus', label: '🚌 Ponto de Ônibus' },
+    { value: 'obra', label: '🚧 Obra' },
+    { value: 'iluminacao', label: '💡 Iluminação' },
+    { value: 'sinalizacao', label: '🚦 Sinalização' },
+    { value: 'outro', label: '📍 Outro' },
+  ];
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex">
-      {/* Sidebar - Editor Controls */}
+      {/* Sidebar */}
       <Card className="w-96 bg-white shadow-2xl overflow-y-auto">
         <div className="p-6 border-b">
           <div className="flex items-center justify-between mb-2">
@@ -182,7 +198,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Add New Pin Form */}
+          {/* Novo Pin */}
           {!isEditingMarker && (
             <div className="space-y-4">
               <h3 className="font-semibold flex items-center gap-2">
@@ -201,7 +217,24 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
+                <Label>Categoria</Label>
+                <Select
+                  value={editForm.category}
+                  onValueChange={(value: LocationCategory) => setEditForm({ ...editForm, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
                 <Select
                   value={editForm.status}
                   onValueChange={(value: any) => setEditForm({ ...editForm, status: value })}
@@ -218,7 +251,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="region">Região</Label>
+                <Label>Região</Label>
                 <Select
                   value={editForm.region}
                   onValueChange={(value) => setEditForm({ ...editForm, region: value })}
@@ -238,8 +271,8 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
                 </Select>
               </div>
 
-              {/* ── NOVO: Campo de link do Google Maps ── */}
-              <div className="space-y-2 pt-2 border-t">
+              {/* ── Campo de link do Google Maps ── */}
+              <div className="space-y-2 pt-3 border-t">
                 <Label htmlFor="google-url" className="flex items-center gap-1">
                   <Link className="size-3" />
                   Colar link do Google Maps
@@ -266,12 +299,8 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
                     Adicionar
                   </Button>
                 </div>
-                {urlError && (
-                  <p className="text-xs text-red-500">{urlError}</p>
-                )}
-                {urlSuccess && (
-                  <p className="text-xs text-green-600">{urlSuccess}</p>
-                )}
+                {urlError && <p className="text-xs text-red-500">{urlError}</p>}
+                {urlSuccess && <p className="text-xs text-green-600">{urlSuccess}</p>}
                 <p className="text-xs text-gray-400">
                   💡 Abra o link encurtado no navegador, copie a URL completa da barra de endereço e cole aqui.
                 </p>
@@ -279,7 +308,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
             </div>
           )}
 
-          {/* Edit Existing Pin */}
+          {/* Editar Pin */}
           {isEditingMarker && selectedMarker && (
             <div className="space-y-4">
               <h3 className="font-semibold flex items-center gap-2">
@@ -297,7 +326,24 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
+                <Label>Categoria</Label>
+                <Select
+                  value={editForm.category}
+                  onValueChange={(value: LocationCategory) => setEditForm({ ...editForm, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
                 <Select
                   value={editForm.status}
                   onValueChange={(value: any) => setEditForm({ ...editForm, status: value })}
@@ -314,7 +360,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-region">Região</Label>
+                <Label>Região</Label>
                 <Select
                   value={editForm.region}
                   onValueChange={(value) => setEditForm({ ...editForm, region: value })}
@@ -342,20 +388,14 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
                 <Button onClick={handleUpdateMarker} className="flex-1">
                   Atualizar
                 </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleDeleteMarker(selectedMarker.id)}
-                >
+                <Button variant="destructive" onClick={() => handleDeleteMarker(selectedMarker.id)}>
                   <Trash2 className="size-4" />
                 </Button>
               </div>
 
               <Button
                 variant="outline"
-                onClick={() => {
-                  setIsEditingMarker(false);
-                  setSelectedMarker(null);
-                }}
+                onClick={() => { setIsEditingMarker(false); setSelectedMarker(null); }}
                 className="w-full"
               >
                 Cancelar
@@ -363,7 +403,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
             </div>
           )}
 
-          {/* Pins List */}
+          {/* Lista de Pins */}
           <div>
             <h3 className="font-semibold mb-3">Pins ({markers.length})</h3>
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -376,6 +416,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
                       title: marker.title,
                       status: marker.status,
                       region: marker.region,
+                      category: marker.category,
                     });
                     setIsEditingMarker(true);
                   }}
@@ -395,7 +436,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Ações */}
           <div className="space-y-2 pt-4 border-t">
             <Button onClick={handleSave} className="w-full" size="lg">
               <Save className="size-4 mr-2" />
@@ -408,52 +449,38 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
         </div>
       </Card>
 
-      {/* Map Area */}
+      {/* Área do Mapa */}
       <div className="flex-1 relative">
-        <div
-          onClick={handleMapClick}
-          className="absolute inset-0 cursor-crosshair"
-        >
-          <img
-            src={mapaImage}
-            alt="Mapa Santa Maria-DF"
-            className="absolute inset-0 w-full h-full object-contain"
-          />
-
-          {/* Markers */}
-          <div className="absolute inset-0">
-            {markers.map((marker) => (
-              <button
-                key={marker.id}
-                onClick={(e) => handleMarkerClick(marker, e)}
-                className="absolute group z-50"
-                style={{
-                  left: `${marker.lng}%`,
-                  top: `${marker.lat}%`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-              >
-                <div className="relative">
-                  <div className={`${statusColors[marker.status]} rounded-full p-3 shadow-2xl transition-all duration-200 group-hover:scale-125 border-4 border-white ${
-                    selectedMarker?.id === marker.id ? 'ring-4 ring-blue-500' : ''
-                  }`}>
-                    <MapPin className="size-6 text-white" strokeWidth={3} fill="currentColor" />
-                  </div>
-
-                  <div className="absolute -top-16 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none">
-                    <div className="bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-2xl whitespace-nowrap font-medium">
-                      {marker.title}
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
-                    </div>
+        <div onClick={handleMapClick} className="absolute inset-0 cursor-crosshair">
+          {markers.map((marker) => (
+            <button
+              key={marker.id}
+              onClick={(e) => handleMarkerClick(marker, e)}
+              className="absolute group z-50"
+              style={{
+                left: `${marker.lng}%`,
+                top: `${marker.lat}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+            >
+              <div className="relative">
+                <div className={`${statusColors[marker.status]} rounded-full p-3 shadow-2xl transition-all duration-200 group-hover:scale-125 border-4 border-white ${
+                  selectedMarker?.id === marker.id ? 'ring-4 ring-blue-500' : ''
+                }`}>
+                  <MapPin className="size-6 text-white" strokeWidth={3} fill="currentColor" />
+                </div>
+                <div className="absolute -top-16 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none">
+                  <div className="bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-2xl whitespace-nowrap font-medium">
+                    {marker.title}
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
                   </div>
                 </div>
-              </button>
-            ))}
-          </div>
+              </div>
+            </button>
+          ))}
 
-          {/* Instructions */}
           {!isEditingMarker && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-10">
               <p className="text-sm font-medium">
                 🖱️ Clique no mapa para adicionar um novo pin
               </p>
