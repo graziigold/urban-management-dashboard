@@ -10,14 +10,10 @@ import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
 import { Textarea } from './components/ui/textarea';
-import { getAllLocations, createLocation, updateLocation, deleteLocation, type Location, type LocationCategory } from '../utils/api/locations';
+import { supabase, getAllLocations, createLocation, updateLocation, deleteLocation, type Location, type LocationCategory } from '../utils/api/locations';
 import { CATEGORIES } from '../utils/categories';
-import { SUPABASE_URL, publicAnonKey } from '../utils/supabase/info';
-import { createClient } from '@supabase/supabase-js';
 
-// Inicializa o cliente aqui dentro direto com as suas chaves atualizadas!
-const supabase = createClient(SUPABASE_URL, publicAnonKey);
-
+// Converter Location (backend) para MapMarker (frontend)
 function locationToMarker(location: Location): MapMarker {
   return {
     id: location.id,
@@ -100,7 +96,7 @@ export default function App() {
     setFormRegion('central');
   };
 
-  // ── SNAP-UPLOAD PARA O STORAGE (NUNCA MAIS TRAVA O BANCO) ──
+  // ── SNAP-UPLOAD PARA O STORAGE (UTILIZANDO INSTÂNCIA EXISTENTE) ──
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
