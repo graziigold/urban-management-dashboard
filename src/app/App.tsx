@@ -13,18 +13,19 @@ import { Textarea } from './components/ui/textarea';
 import { getAllLocations, createLocation, updateLocation, deleteLocation, type Location, type LocationCategory } from '../utils/api/locations';
 import { CATEGORIES } from '../utils/categories';
 
-// ── CONFIGURAÇÃO ATUALIZADA E AUTENTICADA DO GEOPARQUES SM ──
-const SUPABASE_URL = "https://kqrmsxhmbjzwjnxhfnap.supabase.co";
+// ── CONFIGURAÇÃO AUTENTICADA E SINCRONIZADA DO GEOPARQUES SM ──
+const SUPABASE_PROJECT_ID = "kqrmsxhmbjzwjnxhfnap";
 const ANON_KEY = "sb_publishable_DQm7g2O-m4BohGzHD3npfQ_NJd6SBxj";
 
-// Ponte leve para o Storage funcionar via fetch nativo com as novas credenciais
+// Ponte leve ajustada para o Storage funcionar perfeitamente via rota de API dedicada
 const supabase = {
   storage: {
     from: (bucketName: string) => ({
       upload: async (fileName: string, file: File) => {
         try {
+          // Utiliza o subdomínio dedicado de storage que o servidor do Supabase espera receber
           const response = await fetch(
-            `${SUPABASE_URL}/storage/v1/object/${bucketName}/${fileName}`,
+            `https://${SUPABASE_PROJECT_ID}.storage.supabase.co/storage/v1/object/${bucketName}/${fileName}`,
             {
               method: 'POST',
               headers: {
@@ -41,7 +42,7 @@ const supabase = {
         }
       },
       getPublicUrl: (fileName: string) => ({
-        data: { publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${fileName}` }
+        data: { publicUrl: `https://${SUPABASE_PROJECT_ID}.storage.supabase.co/storage/v1/object/public/${bucketName}/${fileName}` }
       })
     })
   }
@@ -152,7 +153,7 @@ export default function App() {
     setFormRegion('central');
   };
 
-  // ── SNAP-UPLOAD PARA O STORAGE (CORRIGIDO E SEGURO) ──
+  // ── SNAP-UPLOAD PARA O STORAGE (PROTEGIDO CONTRA TRAVAMENTOS) ──
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -181,7 +182,7 @@ export default function App() {
       setUploadedImages(prev => [...prev, ...newUrls]);
     } catch (error: any) {
       console.error('Erro no upload para o Storage:', error);
-      alert('Não conseguimos salvar a imagem no servidor agora (verifique se as políticas RLS do bucket fotos-locais estão públicas), mas você ainda pode preencher os textos e salvar o formulário normalmente!');
+      alert('Não conseguimos salvar a foto no servidor de arquivos (verifique as regras de RLS do bucket fotos-locais), mas você ainda pode preencher os dados e salvar o formulário normalmente!');
     } finally {
       setIsUploadingImage(false);
       e.target.value = '';
