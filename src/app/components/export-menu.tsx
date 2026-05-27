@@ -20,9 +20,12 @@ interface ExportMenuProps {
 export function ExportMenu({ markers, siteData, selectedRegion }: ExportMenuProps) {
   const [isExporting, setIsExporting] = useState(false);
 
+  // Garante que o filtro não quebre caso a listagem venha vazia ou nula temporariamente
+  const safeMarkers = Array.isArray(markers) ? markers : [];
+
   const filteredMarkers = selectedRegion
-    ? markers.filter((m) => m.region === selectedRegion)
-    : markers;
+    ? safeMarkers.filter((m) => m && (m.region === selectedRegion || getRegionText(m.region) === selectedRegion))
+    : safeMarkers;
 
   const handleExport = (format: 'csv' | 'excel' | 'json') => {
     setIsExporting(true);
@@ -46,18 +49,28 @@ export function ExportMenu({ markers, siteData, selectedRegion }: ExportMenuProp
     }
   };
 
-  const getRegionText = (region: string) => {
+  function getRegionText(region: string | null | undefined): string {
+    if (!region) return 'Geral';
+    
+    // Mapeamento idêntico ao banco do Supabase e ao arquivo de mapas regionais
     const names: Record<string, string> = {
       norte: 'Santa Maria Norte',
+      'Santa Maria Norte': 'Santa Maria Norte',
       sul: 'Santa Maria Sul',
+      'Santa Maria Sul': 'Santa Maria Sul',
       central: 'Santa Maria Central',
+      'Santa Maria Central': 'Santa Maria Central',
       'santos-dumont': 'Santos Dumont',
+      'Santos Dumont': 'Santos Dumont',
       'total-ville': 'Total Ville',
+      'Total Ville': 'Total Ville',
       'porto-rico': 'Condomínio Porto Rico',
+      'Condomínio Porto Rico': 'Condomínio Porto Rico',
       'polo-jk': 'Polo JK',
+      'Polo JK': 'Polo JK',
     };
     return names[region] || region;
-  };
+  }
 
   const regionText = selectedRegion ? ` - ${getRegionText(selectedRegion)}` : '';
 
