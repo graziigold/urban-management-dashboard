@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Edit, Menu, X, MapPin, Save, Camera, Trash2, Loader2 } from 'lucide-react';
+import { Edit, Menu, X, MapPin, Save, Camera, Trash2, Loader2, Search } from 'lucide-react';
 import { DashboardSidebar } from './components/dashboard-sidebar';
 import { MapView, MapMarker } from './components/map-view';
 import { ExportMenu } from './components/export-menu';
@@ -74,12 +74,14 @@ export default function App() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ── FILTRO DA BUSCA + MAPMARKERS REAL-TIME ──
+  // ── FILTRO DA BUSCA + MAPMARKERS REAL-TIME (ATUALIZADO COM LAT/LONG!) ──
   const markers = useMemo(() => {
     return locations
       .filter(location => 
         location.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (location.address && location.address.toLowerCase().includes(searchQuery.toLowerCase()))
+        (location.address && location.address.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        location.latitude.toString().includes(searchQuery) ||
+        location.longitude.toString().includes(searchQuery)
       )
       .map(locationToMarker);
   }, [locations, searchQuery]);
@@ -348,21 +350,24 @@ export default function App() {
         {/* Container do Mapa com Barra de Pesquisa */}
         <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl md:rounded-2xl overflow-hidden shadow-xl mt-16 md:mt-0 relative flex flex-col">
           
-          {/* 🔍 BARRA DE PESQUISA FLUTUANTE REAL-TIME */}
-          <div className="absolute top-4 left-4 z-20 w-72 md:w-80 max-w-[calc(100%-2rem)]">
-            <div className="relative shadow-md rounded-lg overflow-hidden border border-slate-200/80 bg-white/90 backdrop-blur-sm">
+          {/* 🔍 BARRA DE PESQUISA FLUTUANTE ATUALIZADA (ESTILO DARK GLASSMORPHISM + BUSCA POR COORDENADAS) */}
+          <div className="absolute top-4 left-4 z-20 w-72 md:w-85 max-w-[calc(100%-2rem)]">
+            <div className="relative shadow-xl rounded-xl overflow-hidden border border-slate-700/40 bg-slate-900/85 backdrop-blur-md transition-all duration-300 focus-within:border-emerald-500/60 focus-within:ring-1 focus-within:ring-emerald-500/30">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                <Search className="size-4 text-slate-400 transition-colors duration-200" />
+              </span>
               <Input
                 type="text"
-                placeholder="🔍 Pesquisar por nome ou endereço..."
+                placeholder="Pesquisar por nome, endereço ou coord..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent border-none pl-4 pr-10 py-2 text-sm focus-visible:ring-0 placeholder:text-slate-400 font-medium text-slate-700"
+                className="w-full bg-transparent border-none pl-10 pr-10 py-2.5 text-sm focus-visible:ring-0 placeholder:text-slate-400 font-medium text-slate-100 h-10"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1 rounded-full transition-colors"
                 >
                   <X className="size-4" />
                 </button>
