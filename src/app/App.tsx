@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Edit, Menu, X, MapPin, Save, Camera, Trash2 } from 'lucide-react';
+import { Edit, Menu, X, MapPin, Save, Camera, Trash2, Loader2 } from 'lucide-react';
 import { DashboardSidebar } from './components/dashboard-sidebar';
 import { MapView, MapMarker } from './components/map-view';
 import { ExportMenu } from './components/export-menu';
@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from './components/ui/textarea';
 import { getAllLocations, createLocation, updateLocation, deleteLocation, type Location, type LocationCategory } from '../utils/api/locations';
 import { CATEGORIES } from '../utils/categories';
+// Importação do cliente do Supabase para o Storage profissional
+import { supabase } from '../utils/supabase/info';
 
-// Converter Location (backend) para MapMarker (frontend)
 function locationToMarker(location: Location): MapMarker {
   return {
     id: location.id,
@@ -32,23 +33,30 @@ export default function App() {
   const [mapEditMode, setMapEditMode] = useState(false);
   const [newMarkerCoords, setNewMarkerCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'mock'>('checking');
+  const [locations, setLocations] = useState<Location[]>([]);
 
-  // React recalcula os marcadores automaticamente quando 'locations' muda
-  const markers = useMemo(() => locations.map(locationToMarker), [locations]);
+  // Estados novos: Controle do upload de fotos e texto da barra de pesquisa
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Estados do formulário
+  // ── FILTRO DA BUSCA + MAPMARKERS REAL-TIME ──
+  const markers = useMemo(() => {
+    return locations
+      .filter(location => 
+        location.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (location.address && location.address.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+      .map(locationToMarker);
+  }, [locations, searchQuery]);
+
   const [formCategory, setFormCategory] = useState<LocationCategory>('outro');
   const [formStatus, setFormStatus] = useState<'critical' | 'warning' | 'success'>('success');
   const [formRegion, setFormRegion] = useState<string>('central');
-
-  // Estado para edição de marcador existente
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
 
-  // Carregar dados do Supabase ao iniciar
   useEffect(() => {
     console.log('🚀 App montado - carregando locais...');
     loadLocations();
@@ -58,21 +66,12 @@ export default function App() {
     try {
       setIsLoading(true);
       setDbStatus('checking');
-
       const data = await getAllLocations();
-
       setLocations(data);
       setDbStatus('connected');
-
-      if (data.length === 0) {
-        console.log('✅ Supabase conectado! Banco vazio - pronto para adicionar locais reais');
-      } else {
-        console.log(`✅ ${data.length} locais carregados do Supabase`);
-      }
     } catch (error) {
       setDbStatus('mock');
       setLocations([]);
-      console.log('⚠️ Erro ao conectar - usando modo offline');
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -90,7 +89,6 @@ export default function App() {
     }
   };
 
-  // Handler para adicionar marcador no mapa
   const handleMapClick = (lat: number, lng: number) => {
     setNewMarkerCoords({ lat, lng });
     setUploadedImages([]); 
@@ -99,44 +97,49 @@ export default function App() {
     setFormRegion('central');
   };
 
-  // Handler para upload de imagens
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ── SNAP-UPLOAD PARA O STORAGE (NUNCA MAIS TRAVA O BANCO) ──
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
-    const imagePromises = Array.from(files).map((file) => {
-      return new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (typeof reader.result === 'string') {
-            resolve(reader.result);
-          } else {
-            reject(new Error('Failed to read file'));
-          }
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    });
+    try {
+      setIsUploadingImage(true);
+      const newUrls: string[] = [];
 
-    Promise.all(imagePromises)
-      .then((base64Images) => {
-        setUploadedImages(prev => [...prev, ...base64Images]);
-      })
-      .catch((error) => {
-        console.error('Erro ao carregar imagens:', error);
-        alert('Erro ao carregar imagens. Tente novamente.');
-      })
-      .finally(() => {
-        e.target.value = ''; // Limpa o input para permitir subir a mesma imagem se o usuário excluir
-      });
+      for (const file of Array.from(files)) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('fotos-locais')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from('fotos-locais')
+          .getPublicUrl(fileName);
+
+        newUrls.push(publicUrlData.publicUrl);
+      }
+
+      setUploadedImages(prev => [...prev, ...newUrls]);
+    } catch (error: any) {
+      console.error('Erro no upload para o Storage:', error);
+      alert('Erro ao subir imagens para o servidor: ' + error.message);
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = '';
+    }
   };
 
   const handleRemoveImage = (index: number) => {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Salvar novo marcador
   const handleSaveNewMarker = async (formData: {
     title: string;
     description: string;
@@ -163,22 +166,18 @@ export default function App() {
       });
 
       setLocations(prev => [...prev, newLocation]);
-
       setNewMarkerCoords(null);
       setMapEditMode(false);
       setUploadedImages([]);
       setFormCategory('outro');
       setFormStatus('success');
       setFormRegion('central');
-
-      console.log(`✅ Local "${formData.title}" salvo com ${uploadedImages.length} foto(s)!`);
     } catch (error) {
       console.error('Erro ao salvar local:', error);
       alert('Erro ao salvar o local. Tente novamente.');
     }
   };
 
-  // Atualizar marcador existente
   const handleUpdateMarker = async (formData: {
     title: string;
     description: string;
@@ -200,21 +199,17 @@ export default function App() {
       });
 
       setLocations(prev => prev.map(l => l.id === updatedLocation.id ? updatedLocation : l));
-
       setEditingLocation(null);
       setUploadedImages([]);
       setFormCategory('outro');
       setFormStatus('success');
       setFormRegion('central');
-
-      console.log(`✅ Local "${formData.title}" atualizado!`);
     } catch (error) {
       console.error('Erro ao atualizar local:', error);
       alert('Erro ao atualizar o local. Tente novamente.');
     }
   };
 
-  // Deletar marcador
   const handleDeleteMarker = async () => {
     if (!editingLocation) return;
 
@@ -224,16 +219,12 @@ export default function App() {
 
     try {
       await deleteLocation(editingLocation.id);
-
       setLocations(prev => prev.filter(l => l.id !== editingLocation.id));
-
       setEditingLocation(null);
       setUploadedImages([]);
       setFormCategory('outro');
       setFormStatus('success');
       setFormRegion('central');
-
-      console.log(`✅ Local "${editingLocation.title}" deletado!`);
     } catch (error) {
       console.error('Erro ao deletar local:', error);
       alert('Erro ao deletar o local. Tente novamente.');
@@ -289,31 +280,24 @@ export default function App() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col p-3 md:p-6 relative min-h-0">
-        {/* Mobile Menu Button */}
         <Button
           onClick={() => setIsMobileSidebarOpen(true)}
-          className="lg:hidden absolute top-6 left-6 z-20 bg-slate-900 hover:bg-slate-800 text-white shadow-2xl shadow-slate-900/50 border-2 border-teal-500/30 ring-1 ring-teal-400/20"
+          className="lg:hidden absolute top-6 left-6 z-20 bg-slate-900 hover:bg-slate-800 text-white shadow-2xl"
           size="icon"
         >
           <Menu className="size-5" />
         </Button>
 
-        {/* Database Status Badge */}
         {dbStatus === 'mock' && (
-          <div className="absolute top-6 right-6 z-30 bg-yellow-500/90 backdrop-blur-md text-slate-900 px-3 py-1.5 rounded-lg shadow-lg text-xs font-semibold flex items-center gap-2 ring-1 ring-yellow-400/50">
+          <div className="absolute top-6 right-6 z-30 bg-yellow-500/90 backdrop-blur-md text-slate-900 px-3 py-1.5 rounded-lg shadow-lg text-xs font-semibold flex items-center gap-2">
             <div className="size-2 bg-slate-900 rounded-full animate-pulse" />
             Modo Offline
           </div>
         )}
 
-        {/* Action Buttons */}
         <div className="absolute top-6 right-6 z-20 flex gap-2 md:gap-3" style={{ marginTop: dbStatus === 'mock' ? '40px' : '0' }}>
           <div className="hidden md:block">
-            <ExportMenu
-              markers={markers}
-              siteData={locations}
-              selectedRegion={selectedRegion}
-            />
+            <ExportMenu markers={markers} siteData={locations} selectedRegion={selectedRegion} />
           </div>
           <Button
             onClick={() => setMapEditMode(!mapEditMode)}
@@ -321,7 +305,7 @@ export default function App() {
               mapEditMode
                 ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700'
                 : 'bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700'
-            } shadow-2xl shadow-teal-900/30 text-white ring-2 ring-teal-400/30 hover:ring-teal-400/50 transition-all`}
+            } text-white transition-all shadow-lg`}
             size="lg"
           >
             {mapEditMode ? <X className="size-4 md:mr-2" /> : <MapPin className="size-4 md:mr-2" />}
@@ -329,8 +313,31 @@ export default function App() {
           </Button>
         </div>
 
-        {/* Container do Mapa com ajuste responsivo */}
-        <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl md:rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5 mt-16 md:mt-0">
+        {/* Container do Mapa com Barra de Pesquisa */}
+        <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl md:rounded-2xl overflow-hidden shadow-xl mt-16 md:mt-0 relative flex flex-col">
+          
+          {/* 🔍 BARRA DE PESQUISA FLUTUANTE REAL-TIME */}
+          <div className="absolute top-4 left-4 z-20 w-72 md:w-80 max-w-[calc(100%-2rem)]">
+            <div className="relative shadow-md rounded-lg overflow-hidden border border-slate-200/80 bg-white/90 backdrop-blur-sm">
+              <Input
+                type="text"
+                placeholder="🔍 Pesquisar por nome ou endereço..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent border-none pl-4 pr-10 py-2 text-sm focus-visible:ring-0 placeholder:text-slate-400 font-medium text-slate-700"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
           <MapView
             markers={markers}
             onMarkerClick={handleMarkerClick}
@@ -356,8 +363,7 @@ export default function App() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MapPin className="size-5 text-teal-600" />
-              Adicionar Novo Local
+              <MapPin className="size-5 text-teal-600" /> Adicionar Novo Local
             </DialogTitle>
             <DialogDescription>
               Coordenadas: {newMarkerCoords?.lat.toFixed(6)}, {newMarkerCoords?.lng.toFixed(6)}
@@ -365,7 +371,6 @@ export default function App() {
           </DialogHeader>
 
           <form
-            key="new-marker-form"
             onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
@@ -383,27 +388,17 @@ export default function App() {
           >
             <div className="space-y-2">
               <Label htmlFor="title">Título *</Label>
-              <Input
-                id="title"
-                name="title"
-                placeholder="Ex: Parquinho Central"
-                required
-              />
+              <Input id="title" name="title" placeholder="Ex: Parquinho Central" required />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="category">Tipo de Equipamento *</Label>
               <Select value={formCategory} onValueChange={(value) => setFormCategory(value as LocationCategory)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
-                      <span className="flex items-center gap-2">
-                        <span>{cat.icon}</span>
-                        <span>{cat.label}</span>
-                      </span>
+                      <span className="flex items-center gap-2"><span>{cat.icon}</span><span>{cat.label}</span></span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -412,11 +407,9 @@ export default function App() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select value={formStatus} onValueChange={(value) => setFormStatus(value as 'critical' | 'warning' | 'success')}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Label>Status *</Label>
+                <Select value={formStatus} onValueChange={(value) => setFormStatus(value as any)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="success">✅ Normal</SelectItem>
                     <SelectItem value="warning">⚠️ Atenção</SelectItem>
@@ -426,11 +419,9 @@ export default function App() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="region">Região *</Label>
-                <Select value={formRegion} onValueChange={(value) => setFormRegion(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Label>Região *</Label>
+                <Select value={formRegion} onValueChange={setFormRegion}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="norte">Santa Maria Norte</SelectItem>
                     <SelectItem value="sul">Santa Maria Sul</SelectItem>
@@ -446,45 +437,27 @@ export default function App() {
 
             <div className="space-y-2">
               <Label htmlFor="address">Endereço</Label>
-              <Input
-                id="address"
-                name="address"
-                placeholder="Ex: Quadra 10, Lote 5, Santa Maria-DF"
-              />
+              <Input id="address" name="address" placeholder="Ex: Quadra 10, Lote 5" />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="seiProcess">Processo SEI</Label>
-              <Input
-                id="seiProcess"
-                name="seiProcess"
-                placeholder="Ex: 00123.456789/2026-01"
-              />
+              <Input id="seiProcess" name="seiProcess" placeholder="Ex: 00123.456789/2026-01" />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="description">Descrição</Label>
-              <Textarea
-                id="description"
-                name="description"
-                placeholder="Descreva o local..."
-                rows={3}
-              />
+              <Textarea id="description" name="description" placeholder="Descreva o local..." rows={3} />
             </div>
 
             {/* Upload de Fotos */}
             <div className="space-y-2">
               <Label>Fotos da Vistoria</Label>
-
               {uploadedImages.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   {uploadedImages.map((img, index) => (
                     <div key={index} className="relative group">
-                      <img
-                        src={img}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border-2 border-slate-200"
-                      />
+                      <img src={img} alt={`Preview ${index + 1}`} className="w-full h-24 object-cover rounded-lg border-2" />
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(index)}
@@ -499,49 +472,31 @@ export default function App() {
 
               <label
                 htmlFor="images"
-                className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-teal-500 hover:bg-teal-50 transition-colors"
+                className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                  isUploadingImage ? 'bg-slate-50 border-slate-300 pointer-events-none' : 'hover:border-teal-500 hover:bg-teal-50'
+                }`}
               >
-                <Camera className="size-5 text-slate-500" />
-                <span className="text-sm text-slate-600 font-medium">
-                  {uploadedImages.length > 0
-                    ? `${uploadedImages.length} foto(s) - Adicionar mais`
-                    : 'Adicionar fotos da vistoria'}
-                </span>
+                {isUploadingImage ? (
+                  <>
+                    <Loader2 className="size-5 text-teal-600 animate-spin" />
+                    <span className="text-sm text-teal-600 font-medium">Subindo foto para o servidor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="size-5 text-slate-500" />
+                    <span className="text-sm text-slate-600 font-medium">
+                      {uploadedImages.length > 0 ? `${uploadedImages.length} foto(s) - Adicionar mais` : 'Adicionar fotos da vistoria'}
+                    </span>
+                  </>
+                )}
               </label>
-              <input
-                id="images"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <p className="text-xs text-slate-500">
-                Aceita múltiplas imagens (JPG, PNG, etc.)
-              </p>
+              <input id="images" type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" disabled={isUploadingImage} />
             </div>
 
             <div className="flex gap-2 justify-end pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setNewMarkerCoords(null);
-                  setMapEditMode(false);
-                  setUploadedImages([]);
-                  setFormCategory('outro');
-                  setFormStatus('success');
-                  setFormRegion('central');
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700"
-              >
-                <Save className="size-4 mr-2" />
-                Salvar Local
+              <Button type="button" variant="outline" onClick={() => setNewMarkerCoords(null)} disabled={isUploadingImage}>Cancelar</Button>
+              <Button type="submit" className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white" disabled={isUploadingImage}>
+                <Save className="size-4 mr-2" /> Salvar Local
               </Button>
             </div>
           </form>
@@ -549,28 +504,13 @@ export default function App() {
       </Dialog>
 
       {/* Edit Marker Dialog */}
-      <Dialog open={!!editingLocation} onOpenChange={(open) => {
-        if (!open) {
-          setEditingLocation(null);
-          setUploadedImages([]);
-          setFormCategory('outro');
-          setFormStatus('success');
-          setFormRegion('central');
-        }
-      }}>
+      <Dialog open={!!editingLocation} onOpenChange={(open) => { if (!open) setEditingLocation(null); }}>
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Edit className="size-5 text-teal-600" />
-              Editar Local
-            </DialogTitle>
-            <DialogDescription>
-              Atualize as informações do local selecionado
-            </DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><Edit className="size-5 text-teal-600" /> Editar Local</DialogTitle>
           </DialogHeader>
 
           <form
-            key={editingLocation?.id || 'edit-form'}
             onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
@@ -585,41 +525,24 @@ export default function App() {
           >
             <div className="space-y-2">
               <Label htmlFor="edit-title">Título *</Label>
-              <Input
-                id="edit-title"
-                name="title"
-                placeholder="Ex: Parquinho Central"
-                defaultValue={editingLocation?.title}
-                required
-              />
+              <Input id="edit-title" name="title" defaultValue={editingLocation?.title} required />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-category">Tipo de Equipamento *</Label>
+              <Label>Tipo de Equipamento *</Label>
               <Select value={formCategory} onValueChange={(value) => setFormCategory(value as LocationCategory)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      <span className="flex items-center gap-2">
-                        <span>{cat.icon}</span>
-                        <span>{cat.label}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
+                  {CATEGORIES.map((cat) => (<SelectItem key={cat.id} value={cat.id}><span className="flex items-center gap-2"><span>{cat.icon}</span><span>{cat.label}</span></span></SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-status">Status *</Label>
-                <Select value={formStatus} onValueChange={(value) => setFormStatus(value as 'critical' | 'warning' | 'success')}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Label>Status *</Label>
+                <Select value={formStatus} onValueChange={(value) => setFormStatus(value as any)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="success">✅ Normal</SelectItem>
                     <SelectItem value="warning">⚠️ Atenção</SelectItem>
@@ -629,11 +552,9 @@ export default function App() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-region">Região *</Label>
-                <Select value={formRegion} onValueChange={(value) => setFormRegion(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Label>Região *</Label>
+                <Select value={formRegion} onValueChange={setFormRegion}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="norte">Santa Maria Norte</SelectItem>
                     <SelectItem value="sul">Santa Maria Sul</SelectItem>
@@ -649,55 +570,28 @@ export default function App() {
 
             <div className="space-y-2">
               <Label htmlFor="edit-address">Endereço</Label>
-              <Input
-                id="edit-address"
-                name="address"
-                placeholder="Ex: Quadra 10, Lote 5, Santa Maria-DF"
-                defaultValue={editingLocation?.address}
-              />
+              <Input id="edit-address" name="address" defaultValue={editingLocation?.address} />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="edit-seiProcess">Processo SEI</Label>
-              <Input
-                id="edit-seiProcess"
-                name="seiProcess"
-                placeholder="Ex: 00123.456789/2026-01"
-                defaultValue={editingLocation?.seiProcess}
-              />
+              <Input id="edit-seiProcess" name="seiProcess" defaultValue={editingLocation?.seiProcess} />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="edit-description">Descrição</Label>
-              <Textarea
-                id="edit-description"
-                name="description"
-                placeholder="Descreva o local..."
-                rows={3}
-                defaultValue={editingLocation?.description}
-              />
+              <Textarea id="edit-description" name="description" defaultValue={editingLocation?.description} rows={3} />
             </div>
 
-            {/* Upload de Fotos */}
+            {/* Upload de Fotos na Edição */}
             <div className="space-y-2">
               <Label>Fotos da Vistoria</Label>
-
               {uploadedImages.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   {uploadedImages.map((img, index) => (
                     <div key={index} className="relative group">
-                      <img
-                        src={img}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border-2 border-slate-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="size-3" />
-                      </button>
+                      <img src={img} alt={`Preview ${index + 1}`} className="w-full h-24 object-cover rounded-lg border-2" />
+                      <button type="button" onClick={() => handleRemoveImage(index)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="size-3" /></button>
                     </div>
                   ))}
                 </div>
@@ -705,59 +599,32 @@ export default function App() {
 
               <label
                 htmlFor="edit-images"
-                className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-teal-500 hover:bg-teal-50 transition-colors"
+                className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                  isUploadingImage ? 'bg-slate-50 border-slate-300 pointer-events-none' : 'hover:border-teal-500 hover:bg-teal-50'
+                }`}
               >
-                <Camera className="size-5 text-slate-500" />
-                <span className="text-sm text-slate-600 font-medium">
-                  {uploadedImages.length > 0
-                    ? `${uploadedImages.length} foto(s) - Adicionar mais`
-                    : 'Adicionar fotos da vistoria'}
-                </span>
+                {isUploadingImage ? (
+                  <>
+                    <Loader2 className="size-5 text-teal-600 animate-spin" />
+                    <span className="text-sm text-teal-600 font-medium">Subindo foto para o servidor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="size-5 text-slate-500" />
+                    <span className="text-sm text-slate-600 font-medium">
+                      {uploadedImages.length > 0 ? `${uploadedImages.length} foto(s) - Adicionar mais` : 'Adicionar fotos da vistoria'}
+                    </span>
+                  </>
+                )}
               </label>
-              <input
-                id="edit-images"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <p className="text-xs text-slate-500">
-                Aceita múltiplas imagens (JPG, PNG, etc.)
-              </p>
+              <input id="edit-images" type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" disabled={isUploadingImage} />
             </div>
 
             <div className="flex gap-2 justify-between pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleDeleteMarker}
-                className="border-red-300 text-red-600 hover:bg-red-50"
-              >
-                <Trash2 className="size-4 mr-2" />
-                Deletar
-              </Button>
+              <Button type="button" variant="outline" onClick={handleDeleteMarker} className="border-red-300 text-red-600 hover:bg-red-50" disabled={isUploadingImage}><Trash2 className="size-4 mr-2" /> Deletar</Button>
               <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setEditingLocation(null);
-                    setUploadedImages([]);
-                    setFormCategory('outro');
-                    setFormStatus('success');
-                    setFormRegion('central');
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700"
-                >
-                  <Save className="size-4 mr-2" />
-                  Salvar Alterações
-                </Button>
+                <Button type="button" variant="outline" onClick={() => setEditingLocation(null)} disabled={isUploadingImage}>Cancelar</Button>
+                <Button type="submit" className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white" disabled={isUploadingImage}><Save className="size-4 mr-2" /> Salvar Alterações</Button>
               </div>
             </div>
           </form>
