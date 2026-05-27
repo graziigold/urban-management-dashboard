@@ -13,22 +13,23 @@ import { Textarea } from './components/ui/textarea';
 import { getAllLocations, createLocation, updateLocation, deleteLocation, type Location, type LocationCategory } from '../utils/api/locations';
 import { CATEGORIES } from '../utils/categories';
 
-// Ponte leve para o Storage funcionar via fetch nativo (sem precisar de pacotes adicionais)
+// ── CONFIGURAÇÃO ATUALIZADA E AUTENTICADA DO GEOPARQUES SM ──
+const SUPABASE_URL = "https://kqrmsxhmbjzwjnxhfnap.supabase.co";
+const ANON_KEY = "sb_publishable_DQm7g2O-m4BohGzHD3npfQ_NJd6SBxj";
+
+// Ponte leve para o Storage funcionar via fetch nativo com as novas credenciais
 const supabase = {
   storage: {
     from: (bucketName: string) => ({
       upload: async (fileName: string, file: File) => {
         try {
-          const supabaseUrl = "https://kqrmsxhmbjzwnjxhfnap.supabase.co";
-          const anonKey = "sb_publishable_DQm7g2O-m4BohGzHD3npfQ_NJd6SBxj";
-          
           const response = await fetch(
-            `${supabaseUrl}/storage/v1/object/${bucketName}/${fileName}`,
+            `${SUPABASE_URL}/storage/v1/object/${bucketName}/${fileName}`,
             {
               method: 'POST',
               headers: {
-                'ApiKey': anonKey,
-                'Authorization': `Bearer ${anonKey}`
+                'ApiKey': ANON_KEY,
+                'Authorization': `Bearer ${ANON_KEY}`
               },
               body: file
             }
@@ -40,13 +41,13 @@ const supabase = {
         }
       },
       getPublicUrl: (fileName: string) => ({
-        data: { publicUrl: `https://kqrmsxhmbjzwnjxhfnap.supabase.co/storage/v1/object/public/${bucketName}/${fileName}` }
+        data: { publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${fileName}` }
       })
     })
   }
 };
 
-// Converter Location (backend) para MapMarker (frontend) - BLINDADO CONTRA ERRO 'id'
+// Converter Location (backend) para MapMarker (frontend) - BLINDADO
 function locationToMarker(location: Location): MapMarker {
   if (!location) {
     return { id: 'erro', lat: 0, lng: 0, status: 'success', title: 'Inválido', region: 'central', category: 'outro' };
@@ -73,17 +74,15 @@ export default function App() {
   const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'mock'>('checking');
   const [locations, setLocations] = useState<Location[]>([]);
 
-  // Estados novos: Controle do upload de fotos e texto da barra de pesquisa
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ── FILTRO DA BUSCA + MAPMARKERS REAL-TIME COMPLETAMENTE SEGURO (COM COORDENADAS) ──
+  // ── FILTRO DA BUSCA COMPLETAMENTE BLINDADO CONTRA TELA BRANCA (COM COORDENADAS) ──
   const markers = useMemo(() => {
     if (!locations || !Array.isArray(locations)) return [];
 
     return locations
       .filter(location => {
-        // Remove imediatamente qualquer item nulo ou sem ID antes de ler as propriedades
         if (!location || !location.id) return false;
 
         const titleMatch = location.title 
@@ -105,7 +104,7 @@ export default function App() {
         return titleMatch || addressMatch || latMatch || lngMatch;
       })
       .map(locationToMarker)
-      .filter(marker => marker.id !== 'erro'); // Remove marcadores fantasmas de erro
+      .filter(marker => marker.id !== 'erro');
   }, [locations, searchQuery]);
 
   const [formCategory, setFormCategory] = useState<LocationCategory>('outro');
@@ -153,7 +152,7 @@ export default function App() {
     setFormRegion('central');
   };
 
-  // ── SNAP-UPLOAD PARA O STORAGE (UTILIZANDO INSTÂNCIA EXISTENTE DA API) ──
+  // ── SNAP-UPLOAD PARA O STORAGE (CORRIGIDO E SEGURO) ──
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -168,10 +167,7 @@ export default function App() {
         
         const { error: uploadError } = await supabase.storage
           .from('fotos-locais')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
+          .upload(fileName, file);
 
         if (uploadError) throw uploadError;
 
@@ -185,7 +181,7 @@ export default function App() {
       setUploadedImages(prev => [...prev, ...newUrls]);
     } catch (error: any) {
       console.error('Erro no upload para o Storage:', error);
-      alert('Erro ao subir imagens para o servidor: ' + error.message);
+      alert('Não conseguimos salvar a imagem no servidor agora (verifique se as políticas RLS do bucket fotos-locais estão públicas), mas você ainda pode preencher os textos e salvar o formulário normalmente!');
     } finally {
       setIsUploadingImage(false);
       e.target.value = '';
@@ -372,7 +368,7 @@ export default function App() {
         {/* Container do Mapa com Barra de Pesquisa */}
         <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl md:rounded-2xl overflow-hidden shadow-xl mt-16 md:mt-0 relative flex flex-col">
           
-          {/* 🔍 BARRA DE PESQUISA FLUTUANTE ATUALIZADA (ESTILO DARK GLASSMORPHISM + BUSCA POR COORDENADAS) */}
+          {/* 🔍 BARRA DE PESQUISA FLUTUANTE (DARK GLASSMORPHISM + FILTRO DE LAT/LONG ATIVO) */}
           <div className="absolute top-4 left-4 z-20 w-72 md:w-85 max-w-[calc(100%-2rem)]">
             <div className="relative shadow-xl rounded-xl overflow-hidden border border-slate-700/40 bg-slate-900/85 backdrop-blur-md transition-all duration-300 focus-within:border-emerald-500/60 focus-within:ring-1 focus-within:ring-emerald-500/30">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
