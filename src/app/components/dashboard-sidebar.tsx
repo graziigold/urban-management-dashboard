@@ -35,19 +35,25 @@ export function DashboardSidebar({
   onCategorySelect,
   markers = []
 }: DashboardSidebarProps) {
-  // Calcular contagens por região
+  // Garante estabilidade defensiva caso a propriedade markers venha nula da API
+  const safeMarkers = Array.isArray(markers) ? markers : [];
+
+  // Calcular contagens por região aceitando tanto o ID slug quanto o nome real do banco
   const regionCounts = regions.map(region => ({
     ...region,
-    count: markers.filter(m => m.region === region.id).length,
+    count: safeMarkers.filter(m => 
+      m && (m.region === region.id || m.region === region.name)
+    ).length,
   }));
 
-  // Calcular contagens por categoria
+  // Calcular contagens por categoria com verificação nula preventiva
   const categoryCounts = CATEGORIES.map(category => ({
     ...category,
-    count: markers.filter(m => m.category === category.id).length,
+    count: safeMarkers.filter(m => m && m.category === category.id).length,
   }));
 
-  const totalCount = markers.length;
+  const totalCount = safeMarkers.length;
+  
   return (
     <div className="h-full bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 flex flex-col relative">
       {/* Header */}
@@ -92,32 +98,38 @@ export function DashboardSidebar({
             )}
           </div>
           <div className="space-y-1.5">
-            {regionCounts.map((region) => (
-              <button
-                key={region.id}
-                onClick={() => onRegionSelect(region.id)}
-                className={`w-full flex items-center justify-between px-4 py-3.5 rounded-lg transition-all duration-200 ${
-                  selectedRegion === region.id
-                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-xl shadow-teal-900/50 scale-[1.02]'
-                    : 'text-slate-300 hover:bg-slate-800/50 hover:text-white hover:shadow-lg'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`size-2.5 rounded-full ${region.color} shadow-lg ${selectedRegion === region.id ? 'ring-2 ring-white/80' : 'ring-1 ring-white/20'}`} />
-                  <span className="text-sm font-semibold">{region.name}</span>
-                </div>
-                <Badge
-                  variant="secondary"
-                  className={`text-xs font-bold border-0 ${
-                    selectedRegion === region.id
-                      ? 'bg-white/90 text-teal-700'
-                      : 'bg-slate-700/50 text-slate-300'
+            {regionCounts.map((region) => {
+              // Mantém o botão ativo se bater o ID clássico ou o formato de texto longo do Supabase
+              const isSelected = selectedRegion === region.id || selectedRegion === region.name;
+
+              return (
+                <button
+                  key={region.id}
+                  type="button"
+                  onClick={() => onRegionSelect(region.id)}
+                  className={`w-full flex items-center justify-between px-4 py-3.5 rounded-lg transition-all duration-200 ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-xl shadow-teal-900/50 scale-[1.02]'
+                      : 'text-slate-300 hover:bg-slate-800/50 hover:text-white hover:shadow-lg'
                   }`}
                 >
-                  {region.count}
-                </Badge>
-              </button>
-            ))}
+                  <div className="flex items-center gap-3">
+                    <div className={`size-2.5 rounded-full ${region.color} shadow-lg ${isSelected ? 'ring-2 ring-white/80' : 'ring-1 ring-white/20'}`} />
+                    <span className="text-sm font-semibold">{region.name}</span>
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    className={`text-xs font-bold border-0 ${
+                      isSelected
+                        ? 'bg-white/90 text-teal-700'
+                        : 'bg-slate-700/50 text-slate-300'
+                    }`}
+                  >
+                    {region.count}
+                  </Badge>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -136,6 +148,7 @@ export function DashboardSidebar({
               {categoryCounts.map((category) => (
                 <button
                   key={category.id}
+                  type="button"
                   onClick={() => onCategorySelect(selectedCategory === category.id ? null : category.id)}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${
                     selectedCategory === category.id
@@ -167,6 +180,7 @@ export function DashboardSidebar({
         {(selectedRegion || selectedCategory) && (
           <div className="mt-4">
             <button
+              type="button"
               onClick={() => {
                 onRegionSelect('');
                 if (onCategorySelect) onCategorySelect(null);
