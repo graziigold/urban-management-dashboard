@@ -23,41 +23,47 @@ export function MapDisplay({ markers, onMarkerClick, mapType }: MapDisplayProps)
             src="/mapa-santa-maria.jpg"
             alt="Mapa de Santa Maria-DF"
             className="w-full h-full object-contain"
-          />
+            />
         </div>
 
         {/* Markers Overlay */}
         <div className="absolute inset-0 pointer-events-none">
-          {markers.map((marker) => (
-            <button
-              key={marker.id}
-              onClick={() => onMarkerClick(marker)}
-              className="absolute group pointer-events-auto z-50"
-              style={{
-                left: `${marker.lng}%`,
-                top: `${marker.lat}%`,
-                transform: 'translate(-50%, -100%)',
-              }}
-            >
-              <div className="relative">
-                {/* Pin Icon */}
-                <div className={`relative ${statusColors[marker.status]} rounded-full p-2 shadow-2xl transition-all group-hover:scale-125 border-3 border-white`}>
-                  <MapPin className="size-6 text-white" strokeWidth={2.5} fill="white" />
-                </div>
+          {Array.isArray(markers) && markers.map((marker, index) => {
+            const markerId = marker?.id || `pdf-fallback-${index}`;
+            const currentStatus = marker?.status && marker.status in statusColors ? marker.status : 'success';
+            const colorClass = statusColors[currentStatus as keyof typeof statusColors];
 
-                {/* Pulse for critical */}
-                {marker.status === 'critical' && (
-                  <span className="absolute inset-0 rounded-full bg-red-500 opacity-60 animate-ping" />
-                )}
+            return (
+              <button
+                key={markerId}
+                onClick={() => marker && onMarkerClick(marker)}
+                className="absolute group pointer-events-auto z-50"
+                style={{
+                  left: `${marker?.lng || 0}%`,
+                  top: `${marker?.lat || 0}%`,
+                  transform: 'translate(-50%, -100%)',
+                }}
+              >
+                <div className="relative">
+                  {/* Pin Icon */}
+                  <div className={`relative ${colorClass} rounded-full p-2 shadow-2xl transition-all group-hover:scale-125 border-3 border-white`}>
+                    <MapPin className="size-6 text-white" strokeWidth={2.5} fill="white" />
+                  </div>
 
-                {/* Tooltip */}
-                <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-gray-900 text-white text-xs px-3 py-2 rounded-lg pointer-events-none shadow-xl font-medium z-50">
-                  {marker.title}
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 size-2 bg-gray-900" />
+                  {/* Pulse for critical */}
+                  {currentStatus === 'critical' && (
+                    <span className="absolute inset-0 rounded-full bg-red-500 opacity-60 animate-ping" />
+                  )}
+
+                  {/* Tooltip */}
+                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-gray-900 text-white text-xs px-3 py-2 rounded-lg pointer-events-none shadow-xl font-medium z-50">
+                    {marker?.title || 'Sem título'}
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 size-2 bg-gray-900" />
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </div>
     );
@@ -85,29 +91,35 @@ export function MapDisplay({ markers, onMarkerClick, mapType }: MapDisplayProps)
       </svg>
 
       {/* Markers */}
-      {markers.map((marker) => (
-        <button
-          key={marker.id}
-          onClick={() => onMarkerClick(marker)}
-          className="absolute group"
-          style={{
-            left: `${marker.lng}%`,
-            top: `${marker.lat}%`,
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          <div className="relative">
-            <div className={`size-12 ${statusColors[marker.status]} rounded-full flex items-center justify-center shadow-xl transition-all group-hover:scale-125 border-3 border-white`}>
-              <span className="text-white font-bold text-sm">
-                {marker.title.match(/\d+/)?.[0] || '•'}
-              </span>
+      {Array.isArray(markers) && markers.map((marker, index) => {
+        const markerId = marker?.id || `schematic-fallback-${index}`;
+        const currentStatus = marker?.status && marker.status in statusColors ? marker.status : 'success';
+        const colorClass = statusColors[currentStatus as keyof typeof statusColors];
+
+        return (
+          <button
+            key={markerId}
+            onClick={() => marker && onMarkerClick(marker)}
+            className="absolute group"
+            style={{
+              left: `${marker?.lng || 0}%`,
+              top: `${marker?.lat || 0}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <div className="relative">
+              <div className={`size-12 ${colorClass} rounded-full flex items-center justify-center shadow-xl transition-all group-hover:scale-125 border-3 border-white`}>
+                <span className="text-white font-bold text-sm">
+                  {marker?.title ? (marker.title.match(/\d+/)?.[0] || '•') : '•'}
+                </span>
+              </div>
+              <div className="absolute -top-14 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-gray-900 text-white text-xs px-3 py-2 rounded-lg pointer-events-none shadow-xl">
+                {marker?.title || 'Sem título'}
+              </div>
             </div>
-            <div className="absolute -top-14 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-gray-900 text-white text-xs px-3 py-2 rounded-lg pointer-events-none shadow-xl">
-              {marker.title}
-            </div>
-          </div>
-        </button>
-      ))}
+          </button>
+        );
+      })}
     </div>
   );
 }
