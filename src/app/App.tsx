@@ -13,7 +13,7 @@ import { Textarea } from './components/ui/textarea';
 import { supabase, getAllLocations, createLocation, updateLocation, deleteLocation, type Location, type LocationCategory } from '../utils/api/locations';
 import { CATEGORIES } from '../utils/categories';
 
-// Converter Location (backend) para MapMarker (frontend)
+// Converter Location (backend) para MapMarker (frontend) 
 function locationToMarker(location: Location): MapMarker {
   return {
     id: location.id,
