@@ -96,7 +96,7 @@ export default function App() {
     setFormRegion('central');
   };
 
-  // ── SNAP-UPLOAD PARA O STORAGE (UTILIZANDO INSTÂNCIA EXISTENTE) ──
+  // ── SNAP-UPLOAD PARA O STORAGE (UTILIZANDO INSTÂNCIA EXISTENTE DA API) ──
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
