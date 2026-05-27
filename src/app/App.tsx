@@ -74,15 +74,30 @@ export default function App() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ── FILTRO DA BUSCA + MAPMARKERS REAL-TIME (ATUALIZADO COM LAT/LONG!) ──
+  // ── FILTRO DA BUSCA COMPLETAMENTE BLINDADO CONTRA TELA BRANCA (COM COORDENADAS) ──
   const markers = useMemo(() => {
     return locations
-      .filter(location => 
-        location.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (location.address && location.address.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        location.latitude.toString().includes(searchQuery) ||
-        location.longitude.toString().includes(searchQuery)
-      )
+      .filter(location => {
+        if (!location) return false;
+
+        const titleMatch = location.title 
+          ? location.title.toLowerCase().includes(searchQuery.toLowerCase()) 
+          : false;
+
+        const addressMatch = location.address 
+          ? location.address.toLowerCase().includes(searchQuery.toLowerCase()) 
+          : false;
+
+        const latMatch = location.latitude !== undefined && location.latitude !== null 
+          ? location.latitude.toString().includes(searchQuery) 
+          : false;
+
+        const lngMatch = location.longitude !== undefined && location.longitude !== null 
+          ? location.longitude.toString().includes(searchQuery) 
+          : false;
+
+        return titleMatch || addressMatch || latMatch || lngMatch;
+      })
       .map(locationToMarker);
   }, [locations, searchQuery]);
 
