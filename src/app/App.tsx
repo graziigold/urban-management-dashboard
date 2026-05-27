@@ -12,8 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from './components/ui/textarea';
 import { getAllLocations, createLocation, updateLocation, deleteLocation, type Location, type LocationCategory } from '../utils/api/locations';
 import { CATEGORIES } from '../utils/categories';
-// Importação do cliente do Supabase para o Storage profissional
-import { supabase } from '../utils/supabase/info';
+import { SUPABASE_URL, publicAnonKey } from '../utils/supabase/info';
+import { createClient } from '@supabase/supabase-js';
+
+// Inicializa o cliente aqui dentro direto com as suas chaves atualizadas!
+const supabase = createClient(SUPABASE_URL, publicAnonKey);
 
 function locationToMarker(location: Location): MapMarker {
   return {
