@@ -54,7 +54,8 @@ function extractCoordsFromGoogleUrl(url: string): { lat: number; lng: number } |
 }
 
 export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
-  const [markers, setMarkers] = useState<MapMarker[]>(initialMarkers);
+  // Inicialização segura garantindo que seja sempre um array válido
+  const [markers, setMarkers] = useState<MapMarker[]>(Array.isArray(initialMarkers) ? initialMarkers : []);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [isEditingMarker, setIsEditingMarker] = useState(false);
   const [googleUrl, setGoogleUrl] = useState('');
@@ -125,12 +126,13 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
 
   const handleMarkerClick = (marker: MapMarker, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!marker) return;
     setSelectedMarker(marker);
     setEditForm({
-      title: marker.title,
-      status: marker.status,
-      region: marker.region,
-      category: marker.category,
+      title: marker.title || 'Sem título',
+      status: marker.status || 'success',
+      region: marker.region || 'central',
+      category: marker.category || 'outro',
     });
     setIsEditingMarker(true);
   };
@@ -139,7 +141,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
     if (!selectedMarker) return;
 
     setMarkers(markers.map(m =>
-      m.id === selectedMarker.id
+      m && m.id === selectedMarker.id
         ? { ...m, title: editForm.title, status: editForm.status, region: editForm.region, category: editForm.category }
         : m
     ));
@@ -148,7 +150,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
   };
 
   const handleDeleteMarker = (id: string) => {
-    setMarkers(markers.filter(m => m.id !== id));
+    setMarkers(markers.filter(m => m && m.id !== id));
     setIsEditingMarker(false);
     setSelectedMarker(null);
   };
@@ -381,14 +383,14 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
               </div>
 
               <div className="text-xs text-gray-500">
-                Posição: lat: {selectedMarker.lat.toFixed(2)}, lng: {selectedMarker.lng.toFixed(2)}
+                Posição: lat: {selectedMarker?.lat?.toFixed(2) || 0}, lng: {selectedMarker?.lng?.toFixed(2) || 0}
               </div>
 
               <div className="flex gap-2">
                 <Button onClick={handleUpdateMarker} className="flex-1">
                   Atualizar
                 </Button>
-                <Button variant="destructive" onClick={() => handleDeleteMarker(selectedMarker.id)}>
+                <Button variant="destructive" onClick={() => selectedMarker && handleDeleteMarker(selectedMarker.id)}>
                   <Trash2 className="size-4" />
                 </Button>
               </div>
@@ -407,32 +409,40 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
           <div>
             <h3 className="font-semibold mb-3">Pins ({markers.length})</h3>
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {markers.map((marker) => (
-                <button
-                  key={marker.id}
-                  onClick={() => {
-                    setSelectedMarker(marker);
-                    setEditForm({
-                      title: marker.title,
-                      status: marker.status,
-                      region: marker.region,
-                      category: marker.category,
-                    });
-                    setIsEditingMarker(true);
-                  }}
-                  className={`w-full p-3 rounded-lg border text-left transition-colors hover:bg-gray-50 ${
-                    selectedMarker?.id === marker.id ? 'ring-2 ring-blue-500' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`size-3 rounded-full ${statusColors[marker.status]}`} />
-                    <span className="text-sm font-medium flex-1">{marker.title}</span>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {marker.lat.toFixed(2)}, {marker.lng.toFixed(2)}
-                  </div>
-                </button>
-              ))}
+              {Array.isArray(markers) && markers.map((marker, index) => {
+                if (!marker) return null;
+                const markerId = marker.id || `sidebar-editor-fallback-${index}`;
+                const currentStatus = marker.status && marker.status in statusColors ? marker.status : 'success';
+                const colorClass = statusColors[currentStatus as keyof typeof statusColors];
+
+                return (
+                  <button
+                    key={markerId}
+                    type="button"
+                    onClick={() => {
+                      setSelectedMarker(marker);
+                      setEditForm({
+                        title: marker.title || 'Sem título',
+                        status: currentStatus,
+                        region: marker.region || 'central',
+                        category: marker.category || 'outro',
+                      });
+                      setIsEditingMarker(true);
+                    }}
+                    className={`w-full p-3 rounded-lg border text-left transition-colors hover:bg-gray-50 ${
+                      selectedMarker?.id === marker.id ? 'ring-2 ring-blue-500' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`size-3 rounded-full ${colorClass}`} />
+                      <span className="text-sm font-medium flex-1">{marker.title || 'Sem título'}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {marker.lat?.toFixed(2) || 0}, {marker.lng?.toFixed(2) || 0}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -452,37 +462,45 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
       {/* Área do Mapa */}
       <div className="flex-1 relative">
         <div onClick={handleMapClick} className="absolute inset-0 cursor-crosshair">
-          {markers.map((marker) => (
-            <button
-              key={marker.id}
-              onClick={(e) => handleMarkerClick(marker, e)}
-              className="absolute group z-50"
-              style={{
-                left: `${marker.lng}%`,
-                top: `${marker.lat}%`,
-                transform: 'translate(-50%, -50%)',
-              }}
-            >
-              <div className="relative">
-                <div className={`${statusColors[marker.status]} rounded-full p-3 shadow-2xl transition-all duration-200 group-hover:scale-125 border-4 border-white ${
-                  selectedMarker?.id === marker.id ? 'ring-4 ring-blue-500' : ''
-                }`}>
-                  <MapPin className="size-6 text-white" strokeWidth={3} fill="currentColor" />
-                </div>
-                <div className="absolute -top-16 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none">
-                  <div className="bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-2xl whitespace-nowrap font-medium">
-                    {marker.title}
-                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
+          {Array.isArray(markers) && markers.map((marker, index) => {
+            if (!marker) return null;
+            const markerId = marker.id || `overlay-editor-fallback-${index}`;
+            const currentStatus = marker.status && marker.status in statusColors ? marker.status : 'success';
+            const colorClass = statusColors[currentStatus as keyof typeof statusColors];
+
+            return (
+              <button
+                key={markerId}
+                type="button"
+                onClick={(e) => handleMarkerClick(marker, e)}
+                className="absolute group z-50"
+                style={{
+                  left: `${marker.lng || 0}%`,
+                  top: `${marker.lat || 0}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                <div className="relative">
+                  <div className={`${colorClass} rounded-full p-3 shadow-2xl transition-all duration-200 group-hover:scale-125 border-4 border-white ${
+                    selectedMarker?.id === marker.id ? 'ring-4 ring-blue-500' : ''
+                  }`}>
+                    <MapPin className="size-6 text-white" strokeWidth={3} fill="currentColor" />
+                  </div>
+                  <div className="absolute -top-16 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none">
+                    <div className="bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-2xl whitespace-nowrap font-medium">
+                      {marker.title || 'Sem título'}
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
 
           {!isEditingMarker && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-10">
               <p className="text-sm font-medium">
-                🖱️ Clique no mapa para adicionar um novo pin
+                踩️ Clique no mapa para adicionar um novo pin
               </p>
             </div>
           )}
