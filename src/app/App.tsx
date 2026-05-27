@@ -46,16 +46,19 @@ const supabase = {
   }
 };
 
-// Converter Location (backend) para MapMarker (frontend) 
+// Converter Location (backend) para MapMarker (frontend) - BLINDADO CONTRA ERRO 'id'
 function locationToMarker(location: Location): MapMarker {
+  if (!location) {
+    return { id: 'erro', lat: 0, lng: 0, status: 'success', title: 'Inválido', region: 'central', category: 'outro' };
+  }
   return {
-    id: location.id,
-    lat: location.latitude,
-    lng: location.longitude,
-    status: location.status,
-    title: location.title,
-    region: location.region,
-    category: location.category,
+    id: location.id || String(Math.random()),
+    lat: location.latitude || 0,
+    lng: location.longitude || 0,
+    status: location.status || 'success',
+    title: location.title || 'Sem título',
+    region: location.region || 'central',
+    category: location.category || 'outro',
   };
 }
 
@@ -74,11 +77,14 @@ export default function App() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ── FILTRO DA BUSCA COMPLETAMENTE BLINDADO CONTRA TELA BRANCA (COM COORDENADAS) ──
+  // ── FILTRO DA BUSCA + MAPMARKERS REAL-TIME COMPLETAMENTE SEGURO (COM COORDENADAS) ──
   const markers = useMemo(() => {
+    if (!locations || !Array.isArray(locations)) return [];
+
     return locations
       .filter(location => {
-        if (!location) return false;
+        // Remove imediatamente qualquer item nulo ou sem ID antes de ler as propriedades
+        if (!location || !location.id) return false;
 
         const titleMatch = location.title 
           ? location.title.toLowerCase().includes(searchQuery.toLowerCase()) 
@@ -98,7 +104,8 @@ export default function App() {
 
         return titleMatch || addressMatch || latMatch || lngMatch;
       })
-      .map(locationToMarker);
+      .map(locationToMarker)
+      .filter(marker => marker.id !== 'erro'); // Remove marcadores fantasmas de erro
   }, [locations, searchQuery]);
 
   const [formCategory, setFormCategory] = useState<LocationCategory>('outro');
