@@ -18,7 +18,7 @@ const statusColors = {
   success: '#22C55E',
 };
 
-// Seu token
+// Token Mapbox
 const MAPBOX_TOKEN =
   'pk.eyJ1IjoiZ2Q4MDQiLCJhIjoiY21wN3JzemY0MDBxdTJyb2d1aGNrcXhlYSJ9.oM7_NV696RQsvcLMzD1ucQ';
 
@@ -98,56 +98,80 @@ export function MapboxMap({
     map.current.setStyle(style);
   }, [mapStyle]);
 
-  // Atualizar marcadores
+  // Atualizar marcadores com segurança defensiva
   useEffect(() => {
     if (!map.current) return;
 
-    markersRef.current.forEach((marker) => marker.remove());
+    // Limpa marcadores anteriores com segurança
+    markersRef.current.forEach((m) => {
+      if (m) m.remove();
+    });
     markersRef.current = [];
 
+    if (!Array.isArray(markers)) return;
+
     markers.forEach((marker) => {
+      // Pula se o marcador for inválido ou não tiver coordenadas numéricas limpas
+      if (!marker || marker.lat === undefined || marker.lng === undefined) return;
+
       const container = document.createElement('div');
+      container.className = 'mapbox-custom-marker';
 
       container.style.width = '25px';
       container.style.height = '25px';
       container.style.borderRadius = '50%';
-      container.style.backgroundColor =
-        statusColors[marker.status];
+      
+      // Fallback caso o status venha quebrado do banco
+      const currentStatus = marker.status && marker.status in statusColors ? marker.status : 'success';
+      container.style.backgroundColor = statusColors[currentStatus as keyof typeof statusColors];
 
       container.style.border = '3px solid white';
       container.style.cursor = 'pointer';
-      container.style.boxShadow =
-        '0 0 10px rgba(0,0,0,0.4)';
+      container.style.boxShadow = '0 0 10px rgba(0,0,0,0.4)';
 
-      container.addEventListener('click', () => {
+      container.addEventListener('click', (e) => {
+        e.stopPropagation(); // Evita disparar cliques indesejados no mapa de fundo
         onMarkerClick(marker);
       });
 
-      const mapMarker = new mapboxgl.Marker({
-        element: container,
-      })
-        .setLngLat([marker.lng, marker.lat])
-        .addTo(map.current!);
+      try {
+        const mapMarker = new mapboxgl.Marker({
+          element: container,
+        })
+          .setLngLat([Number(marker.lng), Number(marker.lat)])
+          .addTo(map.current!);
 
-      markersRef.current.push(mapMarker);
+        markersRef.current.push(mapMarker);
+      } catch (err) {
+        console.error('Erro ao plotar marcador no Mapbox:', err);
+      }
     });
   }, [markers, onMarkerClick]);
 
-  // Zoom automático
+  // Zoom automático blindado contra coordenadas inválidas
   useEffect(() => {
     if (!map.current) return;
 
-    if (selectedRegion && markers.length > 0) {
-      const bounds = new mapboxgl.LngLatBounds();
+    // Filtra para garantir que só computará limites usando marcadores válidos
+    const validMarkers = Array.isArray(markers) 
+      ? markers.filter(m => m && m.lng !== undefined && m.lat !== undefined) 
+      : [];
 
-      markers.forEach((marker) => {
-        bounds.extend([marker.lng, marker.lat]);
-      });
+    if (selectedRegion && validMarkers.length > 0) {
+      try {
+        const bounds = new mapboxgl.LngLatBounds();
 
-      map.current.fitBounds(bounds, {
-        padding: 100,
-        duration: 1000,
-      });
+        validMarkers.forEach((marker) => {
+          bounds.extend([Number(marker.lng), Number(marker.lat)]);
+        });
+
+        map.current.fitBounds(bounds, {
+          padding: 100,
+          duration: 1000,
+        });
+      } catch (err) {
+        console.error('Erro ao ajustar limites do mapa:', err);
+      }
     } else {
       map.current.flyTo({
         center: defaultCenter,
@@ -159,24 +183,20 @@ export function MapboxMap({
 
   return (
     <div className="relative w-full h-full">
-
       <button
+        type="button"
         onClick={() =>
           setMapStyle((prev) =>
-            prev === 'streets'
-              ? 'satellite'
-              : 'streets'
+            prev === 'streets' ? 'satellite' : 'streets'
           )
         }
-        className="absolute top-4 left-4 z-10 bg-black text-white px-4 py-2 rounded"
+        className="absolute top-4 left-4 z-10 bg-black text-white px-4 py-2 rounded font-medium shadow-md hover:bg-slate-900 transition-colors"
       >
-        {mapStyle === 'streets'
-          ? 'Satélite'
-          : 'Mapa'}
+        {mapStyle === 'streets' ? 'Satélite' : 'Mapa'}
       </button>
 
       {editMode && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-teal-600 text-white px-4 py-2 rounded">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-teal-600 text-white px-4 py-2 rounded font-medium shadow-md animate-pulse">
           Clique no mapa para adicionar marcador
         </div>
       )}
