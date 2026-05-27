@@ -10,8 +10,15 @@ import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
 import { Textarea } from './components/ui/textarea';
-import { supabase, getAllLocations, createLocation, updateLocation, deleteLocation, type Location, type LocationCategory } from '../utils/api/locations';
+import { getAllLocations, createLocation, updateLocation, deleteLocation, type Location, type LocationCategory } from '../utils/api/locations';
 import { CATEGORIES } from '../utils/categories';
+
+// Buscamos as chaves direto do seu arquivo de configuração que está funcionando
+import { SUPABASE_URL, publicAnonKey } from '../utils/supabase/info';
+import { createClient } from '@supabase/supabase-js';
+
+// Inicializamos a constante supabase aqui dentro de forma independente!
+const supabase = createClient(SUPABASE_URL, publicAnonKey);
 
 // Converter Location (backend) para MapMarker (frontend) 
 function locationToMarker(location: Location): MapMarker {
