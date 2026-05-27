@@ -3,16 +3,38 @@
 
 import mapaCompleto from '../../imports/WhatsApp_Image_2026-05-13_at_14.53.38.jpeg';
 
-// Temporariamente usando o mapa completo - será substituído quando você enviar os mapas
+// Mapeamento protegido aceitando tanto o formato interno (slug) quanto o formato real salvo no banco do Supabase
 export const regionMaps = {
   complete: mapaCompleto,
-  norte: mapaCompleto, // Substituir com mapa Santa Maria Norte
-  sul: mapaCompleto,   // Substituir com mapa Santa Maria Sul
-  central: mapaCompleto, // Substituir com mapa Santa Maria Central
-  'santos-dumont': mapaCompleto, // Substituir com mapa Santos Dumont
-  'total-ville': mapaCompleto, // Substituir com mapa Total Ville
-  'porto-rico': mapaCompleto, // Substituir com mapa Condomínio Porto Rico
-  'polo-jk': mapaCompleto, // Substituir com mapa Polo JK
+  
+  // Santa Maria Norte
+  norte: mapaCompleto,
+  'Santa Maria Norte': mapaCompleto,
+  
+  // Santa Maria Sul
+  sul: mapaCompleto,
+  'Santa Maria Sul': mapaCompleto,
+  
+  // Santa Maria Central / Central
+  central: mapaCompleto,
+  'Santa Maria Central': mapaCompleto,
+  
+  // Santos Dumont
+  'santos-dumont': mapaCompleto,
+  'Santos Dumont': mapaCompleto,
+  
+  // Total Ville
+  'total-ville': mapaCompleto,
+  'Total Ville': mapaCompleto,
+  
+  // Condomínio Porto Rico (Sincronizado exatamente com o seu print do banco!)
+  'porto-rico': mapaCompleto,
+  'Condomínio Porto Rico': mapaCompleto,
+  'porto_rico': mapaCompleto,
+  
+  // Polo JK
+  'polo-jk': mapaCompleto,
+  'Polo JK': mapaCompleto,
 };
 
 export type RegionKey = keyof typeof regionMaps;
