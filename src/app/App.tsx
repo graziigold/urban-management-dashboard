@@ -13,12 +13,38 @@ import { Textarea } from './components/ui/textarea';
 import { getAllLocations, createLocation, updateLocation, deleteLocation, type Location, type LocationCategory } from '../utils/api/locations';
 import { CATEGORIES } from '../utils/categories';
 
-// Buscamos as chaves direto do seu arquivo de configuração que está funcionando
-import { SUPABASE_URL, publicAnonKey } from '../utils/supabase/info';
-import { createClient } from '@supabase/supabase-js';
-
-// Inicializamos a constante supabase aqui dentro de forma independente!
-const supabase = createClient(SUPABASE_URL, publicAnonKey);
+// Ponte leve para o Storage funcionar via fetch nativo (sem precisar de pacotes adicionais)
+const supabase = {
+  storage: {
+    from: (bucketName: string) => ({
+      upload: async (fileName: string, file: File) => {
+        try {
+          const supabaseUrl = "https://kqrmsxhmbjzwnjxhfnap.supabase.co";
+          const anonKey = "sb_publishable_DQm7g2O-m4BohGzHD3npfQ_NJd6SBxj";
+          
+          const response = await fetch(
+            `${supabaseUrl}/storage/v1/object/${bucketName}/${fileName}`,
+            {
+              method: 'POST',
+              headers: {
+                'ApiKey': anonKey,
+                'Authorization': `Bearer ${anonKey}`
+              },
+              body: file
+            }
+          );
+          if (!response.ok) return { data: null, error: await response.json() };
+          return { data: await response.json(), error: null };
+        } catch (err) {
+          return { data: null, error: err };
+        }
+      },
+      getPublicUrl: (fileName: string) => ({
+        data: { publicUrl: `https://kqrmsxhmbjzwnjxhfnap.supabase.co/storage/v1/object/public/${bucketName}/${fileName}` }
+      })
+    })
+  }
+};
 
 // Converter Location (backend) para MapMarker (frontend) 
 function locationToMarker(location: Location): MapMarker {
