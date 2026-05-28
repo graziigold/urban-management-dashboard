@@ -103,13 +103,14 @@ export function InteractiveMap({ markers, onMarkerClick, selectedRegion, current
         {Array.isArray(markers) && markers.map((marker, index) => {
           // Garante que o ID exista para não quebrar a chave do React
           const markerId = marker?.id || `fallback-id-${index}`;
-          // Evita crash se o status vier inválido ou traduzido do banco
+          // Evita crash se o status vier inválido ou modificado
           const currentStatus = marker?.status && marker.status in statusColors ? marker.status : 'success';
           const colorClass = statusColors[currentStatus as keyof typeof statusColors];
 
           return (
             <button
               key={markerId}
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 if (marker) onMarkerClick(marker);
@@ -126,8 +127,8 @@ export function InteractiveMap({ markers, onMarkerClick, selectedRegion, current
                 {/* Animated Pulse Ring */}
                 {currentStatus === 'critical' && (
                   <>
-                    <span className="absolute inset-0 rounded-full bg-red-500 opacity-50 animate-ping scale-150" />
-                    <span className="absolute inset-0 rounded-full bg-red-400 opacity-30 animate-pulse scale-12 Naz" />
+                    <span className="absolute inset-0 rounded-full bg-red-500 opacity-40 animate-ping scale-150" />
+                    <span className="absolute inset-0 rounded-full bg-red-400 opacity-20 animate-pulse scale-110" />
                   </>
                 )}
 
