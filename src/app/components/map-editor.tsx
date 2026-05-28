@@ -43,6 +43,7 @@ function extractCoordsFromGoogleUrl(url: string): { lat: number; lng: number } |
     /[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/,
     /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,
     /place\/[^/]+\/@(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /maps\.google\.com\/.*?(-?\d+\.\d+),(-?\d+\.\d+)/, // Suporte ao link corrigido do sistema
   ];
   for (const pattern of patterns) {
     const match = url.match(pattern);
@@ -54,7 +55,6 @@ function extractCoordsFromGoogleUrl(url: string): { lat: number; lng: number } |
 }
 
 export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
-  // Inicialização segura garantindo que seja sempre um array válido
   const [markers, setMarkers] = useState<MapMarker[]>(Array.isArray(initialMarkers) ? initialMarkers : []);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [isEditingMarker, setIsEditingMarker] = useState(false);
@@ -89,7 +89,6 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
     setEditForm({ ...editForm, title: '' });
   };
 
-  // ── Adicionar pin via link do Google Maps ──────────────────────────────
   const handleAddFromUrl = () => {
     setUrlError('');
     setUrlSuccess('');
@@ -97,14 +96,14 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
     const coords = extractCoordsFromGoogleUrl(googleUrl);
 
     if (!coords) {
-      setUrlError('URL inválida. Abra o link encurtado no navegador, copie a URL completa da barra de endereço e cole aqui.');
+      setUrlError('URL inválida. Certifique-se de copiar o link completo contendo as coordenadas com @lat,lng.');
       return;
     }
 
     const { lngPercent, latPercent } = latLngToPercent(coords.lat, coords.lng);
 
     if (lngPercent <= 0 || lngPercent >= 100 || latPercent <= 0 || latPercent >= 100) {
-      setUrlError(`Coordenadas (${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}) estão fora da área do mapa.`);
+      setUrlError(`As coordenadas extraídas (${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}) ficam fora de Santa Maria-DF.`);
       return;
     }
 
@@ -119,7 +118,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
     };
 
     setMarkers([...markers, newMarker]);
-    setUrlSuccess(`✅ Pin adicionado! (${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)})`);
+    setUrlSuccess(`✅ Pin adicionado com sucesso!`);
     setGoogleUrl('');
     setEditForm({ ...editForm, title: '' });
   };
@@ -157,7 +156,6 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
 
   const handleSave = () => {
     onSave(markers);
-    console.log('Coordenadas dos pins:', JSON.stringify(markers, null, 2));
   };
 
   const exportCoordinates = () => {
@@ -186,7 +184,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex">
       {/* Sidebar */}
-      <Card className="w-96 bg-white shadow-2xl overflow-y-auto">
+      <Card className="w-96 bg-white shadow-2xl overflow-y-auto z-10">
         <div className="p-6 border-b">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-xl font-semibold">Editor de Pins</h2>
@@ -200,7 +198,6 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Novo Pin */}
           {!isEditingMarker && (
             <div className="space-y-4">
               <h3 className="font-semibold flex items-center gap-2">
@@ -273,7 +270,6 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
                 </Select>
               </div>
 
-              {/* ── Campo de link do Google Maps ── */}
               <div className="space-y-2 pt-3 border-t">
                 <Label htmlFor="google-url" className="flex items-center gap-1">
                   <Link className="size-3" />
@@ -282,14 +278,14 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
                 <div className="flex gap-2">
                   <Input
                     id="google-url"
-                    placeholder="https://www.google.com/maps/..."
+                    placeholder="Cole a URL inteira do Maps aqui..."
                     value={googleUrl}
                     onChange={(e) => {
                       setGoogleUrl(e.target.value);
                       setUrlError('');
                       setUrlSuccess('');
                     }}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddFromUrl()}
+                    onKeyDown={(e) => e.key === 'Enter' && googleUrl.trim() && handleAddFromUrl()}
                     className="text-xs"
                   />
                   <Button
@@ -303,14 +299,10 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
                 </div>
                 {urlError && <p className="text-xs text-red-500">{urlError}</p>}
                 {urlSuccess && <p className="text-xs text-green-600">{urlSuccess}</p>}
-                <p className="text-xs text-gray-400">
-                  💡 Abra o link encurtado no navegador, copie a URL completa da barra de endereço e cole aqui.
-                </p>
               </div>
             </div>
           )}
 
-          {/* Editar Pin */}
           {isEditingMarker && selectedMarker && (
             <div className="space-y-4">
               <h3 className="font-semibold flex items-center gap-2">
@@ -382,10 +374,6 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
                 </Select>
               </div>
 
-              <div className="text-xs text-gray-500">
-                Posição: lat: {selectedMarker?.lat?.toFixed(2) || 0}, lng: {selectedMarker?.lng?.toFixed(2) || 0}
-              </div>
-
               <div className="flex gap-2">
                 <Button onClick={handleUpdateMarker} className="flex-1">
                   Atualizar
@@ -405,7 +393,6 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
             </div>
           )}
 
-          {/* Lista de Pins */}
           <div>
             <h3 className="font-semibold mb-3">Pins ({markers.length})</h3>
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -437,16 +424,12 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
                       <div className={`size-3 rounded-full ${colorClass}`} />
                       <span className="text-sm font-medium flex-1">{marker.title || 'Sem título'}</span>
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {marker.lat?.toFixed(2) || 0}, {marker.lng?.toFixed(2) || 0}
-                    </div>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Ações */}
           <div className="space-y-2 pt-4 border-t">
             <Button onClick={handleSave} className="w-full" size="lg">
               <Save className="size-4 mr-2" />
@@ -473,7 +456,7 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
                 key={markerId}
                 type="button"
                 onClick={(e) => handleMarkerClick(marker, e)}
-                className="absolute group z-50"
+                className="absolute group z-40"
                 style={{
                   left: `${marker.lng || 0}%`,
                   top: `${marker.lat || 0}%`,
@@ -498,9 +481,9 @@ export function MapEditor({ initialMarkers, onSave, onClose }: MapEditorProps) {
           })}
 
           {!isEditingMarker && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-10">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-10 pointer-events-none">
               <p className="text-sm font-medium">
-                踩️ Clique no mapa para adicionar um novo pin
+                📍 Clique no mapa para adicionar um novo pin
               </p>
             </div>
           )}
