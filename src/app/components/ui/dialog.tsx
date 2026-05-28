@@ -132,6 +132,7 @@ export {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogContentCustom,
   DialogDescription,
   DialogFooter,
   DialogHeader,
