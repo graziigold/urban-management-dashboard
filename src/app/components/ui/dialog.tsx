@@ -39,7 +39,7 @@ const DialogOverlay = React.forwardRef<
       ref={ref}
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/70 backdrop-blur-sm", // Deixei o fundo do overlay mais escurinho e com blur para destacar a foto!
         className,
       )}
       {...props}
@@ -59,7 +59,8 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          // ── 🛠️ AJUSTE AQUI: O 'sm:max-w-lg' veio para o início, permitindo que o 'max-w-4xl' do Drawer funcione! ──
+          "fixed top-[50%] left-[50%] z-50 grid w-full sm:max-w-lg max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl border bg-background p-6 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           className,
         )}
         {...props}
@@ -108,6 +109,10 @@ function DialogTitle({
       {...props}
     />
   );
+}
+
+function DialogContentCustom({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Content>) {
+  return <DialogContent className={cn("sm:max-w-4xl bg-slate-900/95 border-slate-800", className)} {...props} />;
 }
 
 function DialogDescription({
