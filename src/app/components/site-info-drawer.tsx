@@ -59,6 +59,7 @@ export function SiteInfoDrawer({ site, onClose }: SiteInfoDrawerProps) {
   const openInGoogleMaps = () => {
     const lat = site?.lat || 0;
     const lng = site?.lng || 0;
+    // ── 🛠️ CORREÇÃO DA URL DO GOOGLE MAPS PARA DIRECIONAR CORRETAMENTE ──
     const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
     window.open(url, '_blank');
   };
@@ -213,7 +214,7 @@ export function SiteInfoDrawer({ site, onClose }: SiteInfoDrawerProps) {
       </div>
 
       {/* ── 🔍 MODAL LIGHTBOX COM SUPORTE A CARROSSEL E DIALOG DO SHADCN ── */}
-      <Dialog open={lightboxIndex !== null} onOpenChange={(open) => {!open && setLightboxIndex(null)}}>
+      <Dialog open={lightboxIndex !== null} onOpenChange={(open) => { if (!open) setLightboxIndex(null); }}>
         <DialogContent className="max-w-4xl p-1 bg-slate-900/95 border-slate-800 backdrop-blur-md overflow-hidden flex items-center justify-center select-none">
           <DialogTitle className="sr-only">Ampliação da Imagem da Vistoria</DialogTitle>
           
@@ -224,7 +225,7 @@ export function SiteInfoDrawer({ site, onClose }: SiteInfoDrawerProps) {
               {lightboxIndex > 0 && (
                 <button
                   type="button"
-                  onClick={() => setLightboxIndex(lightboxIndex - 1)}
+                  onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex - 1); }}
                   className="absolute left-4 z-20 text-white bg-slate-950/70 hover:bg-slate-800 p-3 rounded-full border border-white/10 transition-colors shadow-2xl"
                 >
                   <ChevronLeft className="size-6" />
@@ -245,14 +246,14 @@ export function SiteInfoDrawer({ site, onClose }: SiteInfoDrawerProps) {
               {lightboxIndex < totalImages - 1 && (
                 <button
                   type="button"
-                  onClick={() => setLightboxIndex(lightboxIndex + 1)}
+                  onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex + 1); }}
                   className="absolute right-4 z-20 text-white bg-slate-950/70 hover:bg-slate-800 p-3 rounded-full border border-white/10 transition-colors shadow-2xl"
                 >
                   <ChevronRight className="size-6" />
                 </button>
               )}
 
-              {/* Botão Fechar Customizado/Alinhado */}
+              {/* Botão Fechar Customizado */}
               <button
                 type="button"
                 onClick={() => setLightboxIndex(null)}
