@@ -553,7 +553,7 @@ export default function App() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Marker Dialog */}
+      {/* Edit Marker Dialog 1 */}
       <Dialog open={!!editingLocation} onOpenChange={(open) => { if (!open) setEditingLocation(null); }}>
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
