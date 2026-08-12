@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from './components/ui/textarea';
 import { getAllLocations, createLocation, updateLocation, deleteLocation, type Location, type LocationCategory } from '../utils/api/locations';
 import { CATEGORIES } from '../utils/categories';
+import { GaleriaVistoria } from './components/GaleriaVistoria';
 
 // ── CONFIGURAÇÃO AUTENTICADA E SINCRONIZADA DO GEOPARQUES SM ──
 const SUPABASE_PROJECT_ID = "kqrmsxhmbjzwjnxhfnap";
@@ -506,23 +507,16 @@ export default function App() {
               <Textarea id="description" name="description" placeholder="Descreva o local..." rows={3} />
             </div>
 
-            {/* Upload de Fotos */}
+            {/* Upload de Fotos com o componente Galeria */}
             <div className="space-y-2">
               <Label>Fotos da Vistoria</Label>
+              
               {uploadedImages.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  {uploadedImages.map((img, index) => (
-                    <div key={index} className="relative group">
-                      <img src={img} alt={`Preview ${index + 1}`} className="w-full h-24 object-cover rounded-lg border-2" />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="size-3" />
-                      </button>
-                    </div>
-                  ))}
+                <div className="mb-3">
+                  <GaleriaVistoria 
+                    images={uploadedImages} 
+                    onRemoveImage={handleRemoveImage} 
+                  />
                 </div>
               )}
 
@@ -639,17 +633,16 @@ export default function App() {
               <Textarea id="edit-description" name="description" defaultValue={editingLocation?.description} rows={3} />
             </div>
 
-            {/* Upload de Fotos na Edição */}
+            {/* Upload de Fotos na Edição com o componente Galeria */}
             <div className="space-y-2">
               <Label>Fotos da Vistoria</Label>
+              
               {uploadedImages.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  {uploadedImages.map((img, index) => (
-                    <div key={index} className="relative group">
-                      <img src={img} alt={`Preview ${index + 1}`} className="w-full h-24 object-cover rounded-lg border-2" />
-                      <button type="button" onClick={() => handleRemoveImage(index)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="size-3" /></button>
-                    </div>
-                  ))}
+                <div className="mb-3">
+                  <GaleriaVistoria 
+                    images={uploadedImages} 
+                    onRemoveImage={handleRemoveImage} 
+                  />
                 </div>
               )}
 
