@@ -13,11 +13,11 @@ interface MapboxMapProps {
   onAddMarker?: (lat: number, lng: number) => void;
 }
 
-// CORES MAIS VIBRANTES E COM MAIOR CONTRASTE
+// VOLTANDO PARA AS CORES EXATAS DA LEGENDA DO PAINEL
 const statusColors = {
-  critical: '#DC2626', // Vermelho forte
-  warning: '#EA580C',  // Laranja forte
-  success: '#15803D',  // Verde escuro
+  critical: '#EF4444', // Vermelho (Crítico)
+  warning: '#EAB308',  // Amarelo (Atenção)
+  success: '#22C55E',  // Verde (Normal)
 };
 
 // Token Mapbox
