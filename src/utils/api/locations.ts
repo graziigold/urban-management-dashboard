@@ -12,7 +12,7 @@ export type LocationCategory =
   | 'ponto-onibus'
   | 'obra'
   | 'iluminacao'
-  | 'sinalizacao'
+  | 'papa-entulho'
   | 'outro';
 
 export interface Location {
