@@ -66,11 +66,11 @@ export const CATEGORIES: CategoryInfo[] = [
     bgColor: 'bg-yellow-100',
   },
   {
-    id: 'sinalizacao',
-    label: 'Sinalização',
-    icon: '🚦',
-    color: 'text-red-600',
-    bgColor: 'bg-red-100',
+    id: 'papa-entulho',
+    label: 'Papa Entulho',
+    icon: '🗑️',
+    color: 'text-stone-600',
+    bgColor: 'bg-stone-100',
   },
   {
     id: 'outro',
