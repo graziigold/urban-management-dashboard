@@ -13,10 +13,11 @@ interface MapboxMapProps {
   onAddMarker?: (lat: number, lng: number) => void;
 }
 
+// CORES MAIS VIBRANTES E COM MAIOR CONTRASTE
 const statusColors = {
-  critical: '#EF4444',
-  warning: '#EAB308',
-  success: '#22C55E',
+  critical: '#DC2626', // Vermelho forte
+  warning: '#EA580C',  // Laranja forte
+  success: '#15803D',  // Verde escuro
 };
 
 // Token Mapbox
@@ -99,7 +100,7 @@ export function MapboxMap({
     map.current.setStyle(style);
   }, [mapStyle]);
 
-  // Atualizar marcadores com emojis e cores de status
+  // Atualizar marcadores com emojis e cores de status (FIXOS)
   useEffect(() => {
     if (!map.current) return;
 
@@ -114,37 +115,27 @@ export function MapboxMap({
     markers.forEach((marker) => {
       if (!marker || marker.lat === undefined || marker.lng === undefined) return;
 
-      // Pegar as informações da categoria (ex: para pegar o emoji correto)
       const categoryInfo = getCategoryInfo(marker.category);
 
-      // Criar a div principal do pino
       const container = document.createElement('div');
-      container.className = 'mapbox-custom-marker flex items-center justify-center'; // Tailwind inline para flexbox
+      container.className = 'mapbox-custom-marker flex items-center justify-center';
 
-      // Estilizar o container (bolinha)
-      container.style.width = '32px'; // Aumentado um pouco para caber o emoji
+      container.style.width = '32px'; 
       container.style.height = '32px';
       container.style.borderRadius = '50%';
       container.style.display = 'flex';
       container.style.alignItems = 'center';
       container.style.justifyContent = 'center';
-      container.style.fontSize = '16px'; // Tamanho do Emoji
+      container.style.fontSize = '16px'; 
       
-      // Aplicar cor de status no fundo da bolinha
       const currentStatus = marker.status && marker.status in statusColors ? marker.status : 'success';
       container.style.backgroundColor = statusColors[currentStatus as keyof typeof statusColors];
 
-      container.style.border = '2.5px solid white'; // Borda branca em volta
+      container.style.border = '2.5px solid white';
       container.style.cursor = 'pointer';
       container.style.boxShadow = '0 3px 8px rgba(0,0,0,0.5)';
-      container.style.transition = 'transform 0.2s';
       
-      // Injetar o EMOJI no centro do pino!
       container.innerText = categoryInfo.icon;
-
-      // Efeito de hover simples
-      container.onmouseenter = () => { container.style.transform = 'scale(1.15)'; };
-      container.onmouseleave = () => { container.style.transform = 'scale(1)'; };
 
       container.addEventListener('click', (e) => {
         e.stopPropagation();
