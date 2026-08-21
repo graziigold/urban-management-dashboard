@@ -3,6 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '../../styles/mapbox-custom.css';
 import type { MapMarker } from './map-view';
+import { getCategoryInfo } from '../../utils/categories';
 
 interface MapboxMapProps {
   markers: MapMarker[];
@@ -98,11 +99,11 @@ export function MapboxMap({
     map.current.setStyle(style);
   }, [mapStyle]);
 
-  // Atualizar marcadores com segurança defensiva
+  // Atualizar marcadores com emojis e cores de status
   useEffect(() => {
     if (!map.current) return;
 
-    // Limpa marcadores anteriores com segurança
+    // Limpa marcadores anteriores
     markersRef.current.forEach((m) => {
       if (m) m.remove();
     });
@@ -111,26 +112,42 @@ export function MapboxMap({
     if (!Array.isArray(markers)) return;
 
     markers.forEach((marker) => {
-      // Pula se o marcador for inválido ou não tiver coordenadas numéricas limpas
       if (!marker || marker.lat === undefined || marker.lng === undefined) return;
 
-      const container = document.createElement('div');
-      container.className = 'mapbox-custom-marker';
+      // Pegar as informações da categoria (ex: para pegar o emoji correto)
+      const categoryInfo = getCategoryInfo(marker.category);
 
-      container.style.width = '25px';
-      container.style.height = '25px';
+      // Criar a div principal do pino
+      const container = document.createElement('div');
+      container.className = 'mapbox-custom-marker flex items-center justify-center'; // Tailwind inline para flexbox
+
+      // Estilizar o container (bolinha)
+      container.style.width = '32px'; // Aumentado um pouco para caber o emoji
+      container.style.height = '32px';
       container.style.borderRadius = '50%';
+      container.style.display = 'flex';
+      container.style.alignItems = 'center';
+      container.style.justifyContent = 'center';
+      container.style.fontSize = '16px'; // Tamanho do Emoji
       
-      // Fallback caso o status venha quebrado do banco
+      // Aplicar cor de status no fundo da bolinha
       const currentStatus = marker.status && marker.status in statusColors ? marker.status : 'success';
       container.style.backgroundColor = statusColors[currentStatus as keyof typeof statusColors];
 
-      container.style.border = '3px solid white';
+      container.style.border = '2.5px solid white'; // Borda branca em volta
       container.style.cursor = 'pointer';
-      container.style.boxShadow = '0 0 10px rgba(0,0,0,0.4)';
+      container.style.boxShadow = '0 3px 8px rgba(0,0,0,0.5)';
+      container.style.transition = 'transform 0.2s';
+      
+      // Injetar o EMOJI no centro do pino!
+      container.innerText = categoryInfo.icon;
+
+      // Efeito de hover simples
+      container.onmouseenter = () => { container.style.transform = 'scale(1.15)'; };
+      container.onmouseleave = () => { container.style.transform = 'scale(1)'; };
 
       container.addEventListener('click', (e) => {
-        e.stopPropagation(); // Evita disparar cliques indesejados no mapa de fundo
+        e.stopPropagation();
         onMarkerClick(marker);
       });
 
@@ -148,11 +165,10 @@ export function MapboxMap({
     });
   }, [markers, onMarkerClick]);
 
-  // Zoom automático blindado contra coordenadas inválidas
+  // Zoom automático blindado
   useEffect(() => {
     if (!map.current) return;
 
-    // Filtra para garantir que só computará limites usando marcadores válidos
     const validMarkers = Array.isArray(markers) 
       ? markers.filter(m => m && m.lng !== undefined && m.lat !== undefined) 
       : [];
@@ -190,14 +206,14 @@ export function MapboxMap({
             prev === 'streets' ? 'satellite' : 'streets'
           )
         }
-        className="absolute top-4 left-4 z-10 bg-black text-white px-4 py-2 rounded font-medium shadow-md hover:bg-slate-900 transition-colors"
+        className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur text-white px-4 py-2 rounded font-medium shadow-md hover:bg-slate-900 transition-colors"
       >
-        {mapStyle === 'streets' ? 'Satélite' : 'Mapa'}
+        {mapStyle === 'streets' ? 'Modo Satélite' : 'Modo Mapa'}
       </button>
 
       {editMode && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-teal-600 text-white px-4 py-2 rounded font-medium shadow-md animate-pulse">
-          Clique no mapa para adicionar marcador
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-teal-600 text-white px-4 py-2 rounded-full font-medium shadow-lg shadow-teal-900/50 animate-pulse border border-teal-400">
+          📍 Clique no mapa para adicionar
         </div>
       )}
 
