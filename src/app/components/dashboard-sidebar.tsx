@@ -55,7 +55,8 @@ export function DashboardSidebar({
   const totalCount = safeMarkers.length;
   
   return (
-    <div className="h-full bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 flex flex-col relative">
+    // Ajuste aqui: min-h-screen e w-full garantem que o fundo escuro cubra o buraco branco
+    <div className="h-full min-h-screen w-full bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 flex flex-col relative">
       {/* Header */}
       <div className="relative p-6 pb-5 border-b border-white/10">
         {/* Logo GeoParques com efeito flutuante */}
@@ -157,7 +158,7 @@ export function DashboardSidebar({
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-lg">{category.icon}</span>
+                    <span className="text-lg leading-none">{category.icon}</span>
                     <span className="text-sm font-semibold">{category.label}</span>
                   </div>
                   <Badge
