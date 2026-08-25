@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, Mail, Loader2, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, Loader2, MapPin } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -41,7 +41,6 @@ export function Login({ onLoginSuccess }: LoginProps) {
         throw new Error(data.error_description || data.msg || 'Falha na autenticação. Verifique suas credenciais.');
       }
 
-      // Salva a sessão no navegador
       localStorage.setItem('geoparques_token', data.access_token);
       localStorage.setItem('geoparques_user', email);
       
@@ -55,15 +54,26 @@ export function Login({ onLoginSuccess }: LoginProps) {
 
   return (
     <div className="h-screen w-full flex items-center justify-center bg-slate-950 px-4">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-teal-900/20 via-slate-950 to-slate-950 pointer-events-none" />
+      {/* Gradiente de fundo sutil */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-teal-950/40 via-slate-950 to-slate-950 pointer-events-none" />
       
-      <div className="relative w-full max-w-md bg-slate-900/90 backdrop-blur-xl border border-teal-500/30 rounded-2xl shadow-2xl p-8 ring-1 ring-teal-400/20">
-        <div className="text-center mb-8">
-          <div className="inline-flex p-3 bg-teal-500/15 rounded-2xl border border-teal-500/30 text-teal-400 mb-3 shadow-inner">
-            <ShieldCheck className="size-8" />
+      <div className="relative w-full max-w-md bg-slate-900/95 backdrop-blur-xl border-2 border-teal-500/30 rounded-2xl shadow-2xl p-8 ring-1 ring-teal-400/20">
+        
+        {/* Bloco de Identidade Visual Oficial (Espelhando a logo do sidebar) */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-full bg-gradient-to-b from-blue-700 to-blue-900 rounded-xl p-5 border border-teal-400/30 shadow-xl flex flex-col items-center text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-teal-400/15 via-transparent to-transparent pointer-events-none" />
+            
+            {/* Ícone de Pin Estilizado */}
+            <div className="relative size-14 bg-blue-950/80 rounded-full border border-teal-400/40 flex items-center justify-center shadow-inner mb-3">
+              <MapPin className="size-7 text-teal-300 drop-shadow" />
+            </div>
+
+            <h1 className="text-white font-black tracking-wide text-lg">GeoParques SM</h1>
+            <div className="w-full h-px bg-teal-500/30 my-2.5" />
+            <span className="text-[11px] font-bold text-teal-300 uppercase tracking-widest">SISTEMA DE GESTÃO URBANA</span>
+            <span className="text-[10px] text-slate-300 tracking-wider mt-0.5 font-medium">Santa Maria - DF</span>
           </div>
-          <h1 className="text-xl font-black text-white tracking-wide">GeoParques SM</h1>
-          <p className="text-xs text-slate-400 mt-1 uppercase font-semibold">Sistema Restrito de Gestão Urbana</p>
         </div>
 
         {errorMsg && (
@@ -120,8 +130,8 @@ export function Login({ onLoginSuccess }: LoginProps) {
           </Button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-[11px] text-slate-500">
+        <div className="mt-5 text-center">
+          <p className="text-[11px] text-slate-500 font-medium">
             Acesso restrito a servidores e equipe técnica autorizada.
           </p>
         </div>
