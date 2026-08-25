@@ -11,8 +11,6 @@ import {
 import { exportToCSV, exportToExcel, exportToJSON } from './export-utils';
 import type { MapMarker } from './map-view';
 import type { Location } from '../utils/api/locations';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 interface ExportMenuProps {
   markers: MapMarker[];
@@ -29,9 +27,8 @@ export function ExportMenu({ markers, siteData, selectedRegion }: ExportMenuProp
     ? safeMarkers.filter((m) => m && (m.region === selectedRegion || getRegionText(m.region) === selectedRegion))
     : safeMarkers;
 
-  // ── GERADOR DE PDF PROFISSIONAL DE URGÊNCIAS ──
+  // ── GERADOR DE RELATÓRIO PDF EXECUTIVO (Nativo e Blindado contra Erros no Vercel) ──
   const exportUrgentPDF = () => {
-    // Pega apenas os locais marcados como urgentes na base de dados
     const urgentData = (siteData || []).filter(loc => loc && loc.isUrgent);
 
     if (urgentData.length === 0) {
@@ -39,96 +36,93 @@ export function ExportMenu({ markers, siteData, selectedRegion }: ExportMenuProp
       return;
     }
 
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-
-    // ── CABEÇALHO INSTITUCIONAL ──
-    doc.setFillColor(15, 23, 42); // Slate 900
-    doc.rect(0, 0, pageWidth, 28, 'F');
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(255, 255, 255);
-    doc.text('GEOPARQUES SM — SISTEMA DE GESTÃO URBANA', 14, 12);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(148, 163, 184); // Slate 400
-    doc.text('Santa Maria - DF | Relatório Oficial de Demandas Urgentes', 14, 20);
-
-    // ── SUMÁRIO EXECUTIVO ──
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(51, 65, 85);
-    doc.text('SUMÁRIO EXECUTIVO DE ALERTAS', 14, 38);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 14, 44);
-    doc.text(`Total de Ocorrências Críticas / Urgentes: ${urgentData.length}`, 14, 50);
-
-    // ── TABELA DE DADOS ──
-    const tableRows = urgentData.map((loc, index) => [
-      index + 1,
-      loc.title || 'Sem título',
-      (loc.category || 'Outro').toUpperCase(),
-      (loc.region || 'Geral').toUpperCase(),
-      loc.address || 'Endereço não informado',
-      loc.seiProcess || 'Não vinculado'
-    ]);
-
-    autoTable(doc, {
-      startY: 56,
-      head: [['#', 'Equipamento / Local', 'Categoria', 'Região', 'Endereço', 'Processo SEI']],
-      body: tableRows,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [220, 38, 38], // Vermelho de alerta
-        textColor: 255,
-        fontStyle: 'bold',
-        halign: 'center',
-        fontSize: 9
-      },
-      columnStyles: {
-        0: { halign: 'center', cellWidth: 10 },
-        1: { cellWidth: 42, fontStyle: 'bold' },
-        2: { cellWidth: 32 },
-        3: { cellWidth: 28 },
-        4: { cellWidth: 45 },
-        5: { cellWidth: 33 }
-      },
-      alternateRowStyles: {
-        fillColor: [254, 242, 242] // Vermelho clarinho alternado
-      },
-      styles: {
-        fontSize: 8.5,
-        cellPadding: 3.5,
-        textColor: [30, 41, 59]
-      },
-    });
-
-    // ── RODAPÉ DAS PÁGINAS ──
-    const pageCount = (doc as any).internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(
-        `Página ${i} de ${pageCount} — Gerado pelo Sistema GeoParques SM`,
-        pageWidth / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: 'center' }
-      );
+    // Cria uma nova janela de impressão limpa e formatada como documento oficial
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Permita pop-ups no seu navegador para gerar o relatório.');
+      return;
     }
 
-    doc.save(`Relatorio_Urgencias_GeoParques_${new Date().toISOString().slice(0, 10)}.pdf`);
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <title>Relatório de Urgências - GeoParques SM</title>
+        <style>
+          body { font-family: Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 20px; }
+          .header { background-color: #0f172a; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+          .header h1 { margin: 0; font-size: 18px; letter-spacing: 0.5px; }
+          .header p { margin: 5px 0 0 0; color: #94a3b8; font-size: 12px; }
+          .summary { margin-bottom: 20px; font-size: 13px; color: #334155; }
+          .summary p { margin: 4px 0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th { background-color: #dc2626; color: white; text-align: left; padding: 10px; font-size: 11px; text-transform: uppercase; }
+          td { padding: 9px 10px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #1e293b; }
+          tr:nth-child(even) { background-color: #fef2f2; }
+          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #64748b; font-style: italic; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+          @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>GEOPARQUES SM — SISTEMA DE GESTÃO URBANA</h1>
+          <p>Santa Maria - DF | Relatório Oficial de Demandas Críticas e Urgentes</p>
+        </div>
+
+        <div class="summary">
+          <p><strong>Data de Emissão:</strong> ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+          <p><strong>Total de Ocorrências Urgentes:</strong> ${urgentData.length}</p>
+          ${selectedRegion ? `<p><strong>Região Filtrada:</strong> ${getRegionText(selectedRegion)}</p>` : ''}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Equipamento / Local</th>
+              <th>Categoria</th>
+              <th>Região</th>
+              <th>Endereço</th>
+              <th>Processo SEI</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${urgentData.map((loc, idx) => `
+              <tr>
+                <td>${idx + 1}</td>
+                <td><strong>${loc.title || 'Sem título'}</strong></td>
+                <td>${(loc.category || 'Outro').toUpperCase()}</td>
+                <td>${(loc.region || 'Geral').toUpperCase()}</td>
+                <td>${loc.address || 'Não informado'}</td>
+                <td>${loc.seiProcess || 'Não vinculado'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          Gerado pelo Sistema GeoParques SM — Documento Oficial de Vistoria Urbana
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   const handleExport = (format: 'csv' | 'excel' | 'json') => {
     setIsExporting(true);
-
     try {
       switch (format) {
         case 'csv':
@@ -193,7 +187,7 @@ export function ExportMenu({ markers, siteData, selectedRegion }: ExportMenuProp
           </p>
         </div>
 
-        {/* 🚨 NOVO ITEM: RELATÓRIO DE URGÊNCIAS EM PDF */}
+        {/* RELATÓRIO DE URGÊNCIAS */}
         <DropdownMenuItem
           onClick={exportUrgentPDF}
           className="cursor-pointer py-3 hover:bg-red-950/40 text-slate-200 focus:bg-red-950/40 focus:text-white border-b border-slate-800"
@@ -201,7 +195,7 @@ export function ExportMenu({ markers, siteData, selectedRegion }: ExportMenuProp
           <FileText className="size-4 mr-3 text-red-500" />
           <div className="flex-1">
             <div className="font-semibold text-sm text-red-400">Relatório Urgentes (.pdf)</div>
-            <div className="text-xs text-slate-400">Tabela estilizada com alertas críticos</div>
+            <div className="text-xs text-slate-400">Gera visualização de impressão e PDF</div>
           </div>
         </DropdownMenuItem>
 
