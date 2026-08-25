@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Edit, Menu, X, MapPin, Save, Camera, Trash2, Loader2, Search, LogOut, Navigation } from 'lucide-react';
+import { Edit, Menu, X, MapPin, Save, Camera, Trash2, Loader2, Search, LogOut } from 'lucide-react';
 import { DashboardSidebar } from './components/dashboard-sidebar';
 import { MapView, MapMarker } from './components/map-view';
 import { ExportMenu } from './components/export-menu';
@@ -47,24 +47,6 @@ const supabase = {
   }
 };
 
-// Parser de coordenadas (latitude e longitude juntas)
-function parseCoordinates(query: string): { lat: number; lng: number } | null {
-  if (!query) return null;
-  const clean = query.trim().replace(/;/g, ',');
-  const parts = clean.split(/[,\s]+/).map(p => parseFloat(p.trim())).filter(n => !isNaN(n));
-  
-  if (parts.length >= 2) {
-    const [p1, p2] = parts;
-    if (p1 >= -90 && p1 <= 90 && p2 >= -180 && p2 <= 180) {
-      return { lat: p1, lng: p2 };
-    }
-    if (p2 >= -90 && p2 <= 90 && p1 >= -180 && p1 <= 180) {
-      return { lat: p2, lng: p1 };
-    }
-  }
-  return null;
-}
-
 function locationToMarker(location: Location): MapMarker {
   if (!location) {
     return { id: 'erro', lat: 0, lng: 0, status: 'success', title: 'Inválido', region: 'central', category: 'outro' };
@@ -95,15 +77,8 @@ export default function App() {
 
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const [formCategory, setFormCategory] = useState<LocationCategory>('outro');
-  const [formStatus, setFormStatus] = useState<'critical' | 'warning' | 'success'>('success');
-  const [formRegion, setFormRegion] = useState<string>('central');
-  const [formIsUrgent, setFormIsUrgent] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
-
+  // Verifica se o usuário já está logado ao carregar a página
   useEffect(() => {
     const token = localStorage.getItem('geoparques_token');
     const user = localStorage.getItem('geoparques_user');
@@ -120,26 +95,40 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  const parsedCoords = useMemo(() => parseCoordinates(searchQuery), [searchQuery]);
-
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim() || !locations) return [];
-    const q = searchQuery.toLowerCase().trim();
-    
-    return locations.filter(loc => {
-      const titleMatch = loc.title?.toLowerCase().includes(q);
-      const addressMatch = loc.address?.toLowerCase().includes(q);
-      const seiMatch = loc.seiProcess?.toLowerCase().includes(q);
-      const latMatch = loc.latitude !== undefined && loc.latitude !== null && loc.latitude.toString().includes(q);
-      const lngMatch = loc.longitude !== undefined && loc.longitude !== null && loc.longitude.toString().includes(q);
-      return titleMatch || addressMatch || seiMatch || latMatch || lngMatch;
-    }).slice(0, 6);
-  }, [locations, searchQuery]);
-
   const markers = useMemo(() => {
     if (!locations || !Array.isArray(locations)) return [];
-    return locations.map(locationToMarker).filter(marker => marker.id !== 'erro');
-  }, [locations]);
+
+    return locations
+      .filter(location => {
+        if (!location || !location.id) return false;
+
+        const titleMatch = location.title 
+          ? location.title.toLowerCase().includes(searchQuery.toLowerCase()) 
+          : false;
+
+        const addressMatch = location.address 
+          ? location.address.toLowerCase().includes(searchQuery.toLowerCase()) 
+          : false;
+
+        const latMatch = location.latitude !== undefined && location.latitude !== null 
+          ? location.latitude.toString().includes(searchQuery) 
+          : false;
+
+        const lngMatch = location.longitude !== undefined && location.longitude !== null 
+          ? location.longitude.toString().includes(searchQuery) 
+          : false;
+
+        return titleMatch || addressMatch || latMatch || lngMatch;
+      })
+      .map(locationToMarker)
+      .filter(marker => marker.id !== 'erro');
+  }, [locations, searchQuery]);
+
+  const [formCategory, setFormCategory] = useState<LocationCategory>('outro');
+  const [formStatus, setFormStatus] = useState<'critical' | 'warning' | 'success'>('success');
+  const [formRegion, setFormRegion] = useState<string>('central');
+  const [formIsUrgent, setFormIsUrgent] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
 
   useEffect(() => {
     if (authToken) {
@@ -184,14 +173,6 @@ export default function App() {
     setFormIsUrgent(false);
   };
 
-  const handleSelectSearchResult = (lat: number, lng: number, markerToOpen?: Location) => {
-    setTargetLocation({ lat, lng });
-    setIsSearchFocused(false);
-    if (markerToOpen) {
-      handleMarkerClick(locationToMarker(markerToOpen));
-    }
-  };
-
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -219,8 +200,8 @@ export default function App() {
 
       setUploadedImages(prev => [...prev, ...newUrls]);
     } catch (error: any) {
-      console.error('Erro no upload:', error);
-      alert('Não foi possível salvar a imagem no servidor. O formulário ainda pode ser salvo normalmente.');
+      console.error('Erro no upload para o Storage:', error);
+      alert('Não conseguimos salvar a foto no servidor de arquivos, mas você ainda pode preencher os dados e salvar o formulário normalmente!');
     } finally {
       setIsUploadingImage(false);
       e.target.value = '';
@@ -254,7 +235,6 @@ export default function App() {
         address: formData.address,
         seiProcess: formData.seiProcess,
         isUrgent: formIsUrgent,
-        updatedBy: currentUser || 'Administrador',
         images: uploadedImages,
       });
 
@@ -290,7 +270,6 @@ export default function App() {
         region: formRegion,
         category: formCategory,
         isUrgent: formIsUrgent,
-        updatedBy: currentUser || 'Administrador',
         images: uploadedImages,
       });
 
@@ -329,6 +308,7 @@ export default function App() {
     }
   };
 
+  // Se não estiver autenticado, exibe a tela de login
   if (!authToken) {
     return <Login onLoginSuccess={(token, user) => { setAuthToken(token); setCurrentUser(user); }} />;
   }
@@ -397,12 +377,10 @@ export default function App() {
           </div>
         )}
 
-        {/* Menu Superior Direito */}
         <div className="absolute top-6 right-6 z-20 flex gap-2 md:gap-3" style={{ marginTop: dbStatus === 'mock' ? '40px' : '0' }}>
           <div className="hidden md:block">
             <ExportMenu markers={markers} siteData={locations} selectedRegion={selectedRegion} />
           </div>
-
           <Button
             onClick={() => setMapEditMode(!mapEditMode)}
             className={`${
@@ -416,6 +394,7 @@ export default function App() {
             <span className="hidden md:inline">{mapEditMode ? 'Cancelar' : 'Adicionar Pins'}</span>
           </Button>
 
+          {/* Botão de Logout */}
           <Button
             onClick={handleLogout}
             variant="outline"
@@ -430,80 +409,26 @@ export default function App() {
         {/* Container do Mapa com Barra de Pesquisa */}
         <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl md:rounded-2xl overflow-hidden shadow-xl mt-16 md:mt-0 relative flex flex-col">
           
-          <div className="absolute top-4 left-4 z-30 w-80 md:w-96 max-w-[calc(100%-2rem)]">
-            <div className="relative shadow-2xl rounded-2xl border border-slate-700/60 bg-slate-900/95 backdrop-blur-xl transition-all duration-300 focus-within:border-teal-500/80 focus-within:ring-2 focus-within:ring-teal-500/30">
-              <div className="relative flex items-center">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-teal-400">
-                  <Search className="size-4" />
-                </span>
-                <Input
-                  type="text"
-                  placeholder="Pesquisar nome, endereço ou colar Lat, Long..."
-                  value={searchQuery}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      if (parsedCoords) {
-                        handleSelectSearchResult(parsedCoords.lat, parsedCoords.lng);
-                      } else if (searchResults.length > 0) {
-                        handleSelectSearchResult(searchResults[0].latitude, searchResults[0].longitude, searchResults[0]);
-                      }
-                    }
-                  }}
-                  className="w-full bg-transparent border-none pl-10 pr-10 py-2.5 text-sm focus-visible:ring-0 placeholder:text-slate-400 font-medium text-slate-100 h-11"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => { setSearchQuery(''); setIsSearchFocused(false); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1 rounded-full transition-colors"
-                  >
-                    <X className="size-4" />
-                  </button>
-                )}
-              </div>
-
-              {/* Lista Suspensa com Resultados e Atalho de Coordenadas */}
-              {isSearchFocused && searchQuery.trim() && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/98 border border-slate-700/80 rounded-xl shadow-2xl overflow-hidden backdrop-blur-2xl z-40 max-h-72 overflow-y-auto">
-                  {parsedCoords && (
-                    <div
-                      onClick={() => handleSelectSearchResult(parsedCoords.lat, parsedCoords.lng)}
-                      className="p-3 border-b border-teal-500/20 bg-teal-950/40 hover:bg-teal-900/50 cursor-pointer transition-colors flex items-center gap-3"
-                    >
-                      <Navigation className="size-5 text-teal-400 shrink-0 animate-pulse" />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold text-teal-300">Ir para coordenada exata</div>
-                        <div className="text-[11px] text-slate-400 truncate">
-                          Lat: {parsedCoords.lat.toFixed(6)}, Lng: {parsedCoords.lng.toFixed(6)}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {searchResults.map((loc) => (
-                    <div
-                      key={loc.id}
-                      onClick={() => handleSelectSearchResult(loc.latitude, loc.longitude, loc)}
-                      className="p-3 hover:bg-slate-800/80 cursor-pointer border-b border-slate-800/50 last:border-b-0 transition-colors flex items-center justify-between gap-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-slate-200 truncate">{loc.title}</div>
-                        <div className="text-xs text-slate-400 truncate">{loc.address || 'Sem endereço detalhado'}</div>
-                      </div>
-                      <div className="text-[10px] uppercase font-bold text-teal-400 bg-teal-950/80 border border-teal-500/30 px-2 py-0.5 rounded-full shrink-0">
-                        {loc.region}
-                      </div>
-                    </div>
-                  ))}
-
-                  {!parsedCoords && searchResults.length === 0 && (
-                    <div className="p-4 text-center text-xs text-slate-400">
-                      Nenhum local encontrado para "{searchQuery}"
-                    </div>
-                  )}
-                </div>
+          <div className="absolute top-4 left-4 z-20 w-72 md:w-85 max-w-[calc(100%-2rem)]">
+            <div className="relative shadow-xl rounded-xl overflow-hidden border border-slate-700/40 bg-slate-900/85 backdrop-blur-md transition-all duration-300 focus-within:border-emerald-500/60 focus-within:ring-1 focus-within:ring-emerald-500/30">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                <Search className="size-4 text-slate-400 transition-colors duration-200" />
+              </span>
+              <Input
+                type="text"
+                placeholder="Pesquisar por nome, endereço ou coord..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent border-none pl-10 pr-10 py-2.5 text-sm focus-visible:ring-0 placeholder:text-slate-400 font-medium text-slate-100 h-10"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1 rounded-full transition-colors"
+                >
+                  <X className="size-4" />
+                </button>
               )}
             </div>
           </div>
@@ -516,7 +441,6 @@ export default function App() {
             editMode={mapEditMode}
             onAddMarker={handleMapClick}
             allLocations={locations}
-            targetLocation={targetLocation}
           />
         </div>
       </div>
