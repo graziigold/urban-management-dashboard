@@ -1,4 +1,3 @@
-import { MapPin } from 'lucide-react';
 import { Badge } from './ui/badge';
 import logoGeoParques from '../../imports/ChatGPT_Image_15_de_mai._de_2026__15_52_11.png';
 import { CATEGORIES } from '../../utils/categories';
@@ -35,10 +34,8 @@ export function DashboardSidebar({
   onCategorySelect,
   markers = []
 }: DashboardSidebarProps) {
-  // Garante estabilidade defensiva caso a propriedade markers venha nula da API
   const safeMarkers = Array.isArray(markers) ? markers : [];
 
-  // Calcular contagens por região aceitando tanto o ID slug quanto o nome real do banco
   const regionCounts = regions.map(region => ({
     ...region,
     count: safeMarkers.filter(m => 
@@ -46,7 +43,6 @@ export function DashboardSidebar({
     ).length,
   }));
 
-  // Calcular contagens por categoria com verificação nula preventiva
   const categoryCounts = CATEGORIES.map(category => ({
     ...category,
     count: safeMarkers.filter(m => m && m.category === category.id).length,
@@ -55,28 +51,17 @@ export function DashboardSidebar({
   const totalCount = safeMarkers.length;
   
   return (
-    // Ajuste aqui: min-h-screen e w-full garantem que o fundo escuro cubra o buraco branco
     <div className="h-full min-h-screen w-full bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 flex flex-col relative">
-      {/* Header */}
       <div className="relative p-6 pb-5 border-b border-white/10">
-        {/* Logo GeoParques com efeito flutuante */}
         <div className="flex justify-center mb-4">
           <div className="relative group w-full max-w-[200px]">
-            {/* Glow effect */}
             <div className="absolute inset-0 bg-gradient-to-br from-teal-400/20 to-purple-500/20 blur-2xl rounded-3xl scale-110 group-hover:scale-115 transition-transform duration-500" />
-
-            {/* Container da logo */}
             <div className="relative bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl p-5 rounded-3xl shadow-2xl shadow-black/50 ring-1 ring-teal-400/30 border border-white/10 hover:ring-teal-400/50 hover:shadow-teal-900/30 transition-all duration-300 hover:scale-105">
-              <img
-                src={logoGeoParques}
-                alt="GeoParques SM"
-                className="w-full h-auto drop-shadow-2xl"
-              />
+              <img src={logoGeoParques} alt="GeoParques SM" className="w-full h-auto drop-shadow-2xl" />
             </div>
           </div>
         </div>
 
-        {/* Subtítulo */}
         <div className="text-center space-y-1">
           <p className="text-xs text-slate-300 font-bold tracking-wide uppercase">Sistema de Gestão Urbana</p>
           <div className="flex items-center justify-center gap-2">
@@ -87,22 +72,15 @@ export function DashboardSidebar({
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="relative flex-1 p-4 overflow-y-auto">
         <div className="mb-4">
           <div className="flex items-center justify-between px-3 mb-3">
-            <h2 className="text-xs uppercase tracking-wider text-slate-400 font-bold">
-              Regiões Cadastradas
-            </h2>
-            {selectedRegion && (
-              <div className="size-2 rounded-full bg-teal-400 animate-pulse shadow-lg shadow-teal-400/50" />
-            )}
+            <h2 className="text-xs uppercase tracking-wider text-slate-400 font-bold">Regiões Cadastradas</h2>
+            {selectedRegion && <div className="size-2 rounded-full bg-teal-400 animate-pulse shadow-lg shadow-teal-400/50" />}
           </div>
           <div className="space-y-1.5">
             {regionCounts.map((region) => {
-              // Mantém o botão ativo se bater o ID clássico ou o formato de texto longo do Supabase
               const isSelected = selectedRegion === region.id || selectedRegion === region.name;
-
               return (
                 <button
                   key={region.id}
@@ -118,14 +96,7 @@ export function DashboardSidebar({
                     <div className={`size-2.5 rounded-full ${region.color} shadow-lg ${isSelected ? 'ring-2 ring-white/80' : 'ring-1 ring-white/20'}`} />
                     <span className="text-sm font-semibold">{region.name}</span>
                   </div>
-                  <Badge
-                    variant="secondary"
-                    className={`text-xs font-bold border-0 ${
-                      isSelected
-                        ? 'bg-white/90 text-teal-700'
-                        : 'bg-slate-700/50 text-slate-300'
-                    }`}
-                  >
+                  <Badge variant="secondary" className={`text-xs font-bold border-0 ${isSelected ? 'bg-white/90 text-teal-700' : 'bg-slate-700/50 text-slate-300'}`}>
                     {region.count}
                   </Badge>
                 </button>
@@ -134,50 +105,42 @@ export function DashboardSidebar({
           </div>
         </div>
 
-        {/* Category Filters */}
         {onCategorySelect && (
           <div className="mt-6">
             <div className="flex items-center justify-between px-3 mb-3">
-              <h2 className="text-xs uppercase tracking-wider text-slate-400 font-bold">
-                Filtrar por Tipo
-              </h2>
-              {selectedCategory && (
-                <div className="size-2 rounded-full bg-purple-400 animate-pulse shadow-lg shadow-purple-400/50" />
-              )}
+              <h2 className="text-xs uppercase tracking-wider text-slate-400 font-bold">Filtrar por Tipo</h2>
+              {selectedCategory && <div className="size-2 rounded-full bg-purple-400 animate-pulse shadow-lg shadow-purple-400/50" />}
             </div>
             <div className="space-y-1.5">
-              {categoryCounts.map((category) => (
-                <button
-                  key={category.id}
-                  type="button"
-                  onClick={() => onCategorySelect(selectedCategory === category.id ? null : category.id)}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${
-                    selectedCategory === category.id
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl shadow-purple-900/50 scale-[1.02]'
-                      : 'text-slate-300 hover:bg-slate-800/50 hover:text-white hover:shadow-lg'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg leading-none">{category.icon}</span>
-                    <span className="text-sm font-semibold">{category.label}</span>
-                  </div>
-                  <Badge
-                    variant="secondary"
-                    className={`text-xs font-bold border-0 ${
+              {categoryCounts.map((category) => {
+                // Puxamos o componente de ícone para renderizar!
+                const IconComponent = category.icon;
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => onCategorySelect(selectedCategory === category.id ? null : category.id)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${
                       selectedCategory === category.id
-                        ? 'bg-white/90 text-purple-700'
-                        : 'bg-slate-700/50 text-slate-300'
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl shadow-purple-900/50 scale-[1.02]'
+                        : 'text-slate-300 hover:bg-slate-800/50 hover:text-white hover:shadow-lg'
                     }`}
                   >
-                    {category.count}
-                  </Badge>
-                </button>
-              ))}
+                    <div className="flex items-center gap-3">
+                      {/* O ÍCONE ENTRA AQUI: Renderizado como componente React */}
+                      <IconComponent className={`size-4 ${selectedCategory === category.id ? 'text-white' : category.color}`} />
+                      <span className="text-sm font-semibold">{category.label}</span>
+                    </div>
+                    <Badge variant="secondary" className={`text-xs font-bold border-0 ${selectedCategory === category.id ? 'bg-white/90 text-purple-700' : 'bg-slate-700/50 text-slate-300'}`}>
+                      {category.count}
+                    </Badge>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Clear Filters Button */}
         {(selectedRegion || selectedCategory) && (
           <div className="mt-4">
             <button
@@ -194,16 +157,11 @@ export function DashboardSidebar({
           </div>
         )}
 
-        {/* Stats Card */}
         <div className="mt-6 relative group">
-          {/* Glow */}
           <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 to-emerald-500/10 blur-xl rounded-2xl group-hover:blur-2xl transition-all duration-300" />
-
           <div className="relative p-5 bg-gradient-to-br from-teal-600/20 via-emerald-600/20 to-teal-600/20 backdrop-blur-md rounded-2xl border border-teal-500/30 shadow-2xl ring-1 ring-teal-400/20 hover:ring-teal-400/40 transition-all duration-300">
             <div className="flex items-center justify-between mb-3">
-              <div className="text-xs text-teal-300 font-bold uppercase tracking-wider">
-                Total de Locais
-              </div>
+              <div className="text-xs text-teal-300 font-bold uppercase tracking-wider">Total de Locais</div>
               <div className="size-2 rounded-full bg-teal-400 animate-pulse shadow-lg shadow-teal-400/50" />
             </div>
             <div className="text-5xl font-black text-white mb-1 bg-gradient-to-br from-white to-teal-100 bg-clip-text text-transparent">
@@ -222,8 +180,6 @@ export function DashboardSidebar({
           </div>
         </div>
       </nav>
-
-      {/* Footer */}
       <div className="relative p-4 border-t border-white/5 bg-black/20">
         <div className="text-xs text-slate-500">
           Última atualização: {new Date().toLocaleDateString('pt-BR')}
