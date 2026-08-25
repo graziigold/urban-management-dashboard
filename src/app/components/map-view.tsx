@@ -18,7 +18,29 @@ interface MapViewProps {
   selectedCategory?: LocationCategory | null;
   editMode?: boolean;
   onAddMarker?: (lat: number, lng: number) => void;
-  allLocations?: any[]; // <-- Adicionamos a lista bruta opcional para contagem exata
+  allLocations?: any[];
+}
+
+// 🛡️ Validador blindado para unificar IDs e nomes das regiões sem divergência
+function matchesRegion(itemRegion: string, targetRegion: string | null): boolean {
+  if (!targetRegion) return true;
+  if (!itemRegion) return false;
+  
+  const cleanItem = String(itemRegion).toLowerCase().trim();
+  const cleanTarget = String(targetRegion).toLowerCase().trim();
+
+  const regionSynonyms: Record<string, string[]> = {
+    norte: ['norte', 'santa maria norte'],
+    sul: ['sul', 'santa maria sul'],
+    central: ['central', 'santa maria central'],
+    'santos-dumont': ['santos-dumont', 'santos dumont'],
+    'total-ville': ['total-ville', 'total ville'],
+    'porto-rico': ['porto-rico', 'condomínio porto rico', 'condominio porto rico', 'porto rico'],
+    'polo-jk': ['polo-jk', 'polo jk']
+  };
+
+  const acceptedValues = regionSynonyms[cleanTarget] || [cleanTarget];
+  return acceptedValues.includes(cleanItem);
 }
 
 export function MapView({
@@ -30,20 +52,22 @@ export function MapView({
   onAddMarker,
   allLocations = []
 }: MapViewProps) {
-  // Filtrar por região e categoria para os pins do mapa
+  // Filtrar marcadores usando o validador unificado
   let filteredMarkers = markers;
 
   if (selectedRegion) {
-    filteredMarkers = filteredMarkers.filter((m) => m.region === selectedRegion);
+    filteredMarkers = filteredMarkers.filter((m) => matchesRegion(m.region, selectedRegion));
   }
 
   if (selectedCategory) {
     filteredMarkers = filteredMarkers.filter((m) => m.category === selectedCategory);
   }
 
-  // Contagem exata para o badge do topo (considerando a região bruta do banco)
+  // Contagem exata sincronizada com a base bruta (bate exato com o sidebar)
   const exactRegionCount = selectedRegion 
-    ? (allLocations.length > 0 ? allLocations.filter(l => l && l.region === selectedRegion).length : filteredMarkers.length)
+    ? (allLocations.length > 0 
+        ? allLocations.filter(l => l && matchesRegion(l.region, selectedRegion)).length 
+        : filteredMarkers.length)
     : filteredMarkers.length;
 
   return (
@@ -59,7 +83,7 @@ export function MapView({
         />
       </div>
 
-      {/* Region Label quando filtrado */}
+      {/* Region Label com Contagem Sincronizada */}
       {selectedRegion && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-3 rounded-full shadow-2xl border-2 border-teal-400/50 backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-500 ring-2 ring-teal-500/30">
           <div className="flex items-center gap-2">
