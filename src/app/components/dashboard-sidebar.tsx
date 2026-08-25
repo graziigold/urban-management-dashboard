@@ -3,11 +3,7 @@ import logoGeoParques from '../../imports/ChatGPT_Image_15_de_mai._de_2026__15_5
 import { CATEGORIES } from '../../utils/categories';
 import type { LocationCategory } from '../../utils/api/locations';
 
-interface Region {
-  id: string;
-  name: string;
-  color: string;
-}
+interface Region { id: string; name: string; color: string; }
 
 const regions: Region[] = [
   { id: 'norte', name: 'Santa Maria Norte', color: 'bg-blue-500' },
@@ -27,27 +23,10 @@ interface DashboardSidebarProps {
   markers?: Array<{ region: string; category: LocationCategory }>;
 }
 
-export function DashboardSidebar({
-  selectedRegion,
-  onRegionSelect,
-  selectedCategory,
-  onCategorySelect,
-  markers = []
-}: DashboardSidebarProps) {
+export function DashboardSidebar({ selectedRegion, onRegionSelect, selectedCategory, onCategorySelect, markers = [] }: DashboardSidebarProps) {
   const safeMarkers = Array.isArray(markers) ? markers : [];
-
-  const regionCounts = regions.map(region => ({
-    ...region,
-    count: safeMarkers.filter(m => 
-      m && (m.region === region.id || m.region === region.name)
-    ).length,
-  }));
-
-  const categoryCounts = CATEGORIES.map(category => ({
-    ...category,
-    count: safeMarkers.filter(m => m && m.category === category.id).length,
-  }));
-
+  const regionCounts = regions.map(region => ({ ...region, count: safeMarkers.filter(m => m && (m.region === region.id || m.region === region.name)).length }));
+  const categoryCounts = CATEGORIES.map(category => ({ ...category, count: safeMarkers.filter(m => m && m.category === category.id).length }));
   const totalCount = safeMarkers.length;
   
   return (
@@ -61,7 +40,6 @@ export function DashboardSidebar({
             </div>
           </div>
         </div>
-
         <div className="text-center space-y-1">
           <p className="text-xs text-slate-300 font-bold tracking-wide uppercase">Sistema de Gestão Urbana</p>
           <div className="flex items-center justify-center gap-2">
@@ -76,29 +54,17 @@ export function DashboardSidebar({
         <div className="mb-4">
           <div className="flex items-center justify-between px-3 mb-3">
             <h2 className="text-xs uppercase tracking-wider text-slate-400 font-bold">Regiões Cadastradas</h2>
-            {selectedRegion && <div className="size-2 rounded-full bg-teal-400 animate-pulse shadow-lg shadow-teal-400/50" />}
           </div>
           <div className="space-y-1.5">
             {regionCounts.map((region) => {
               const isSelected = selectedRegion === region.id || selectedRegion === region.name;
               return (
-                <button
-                  key={region.id}
-                  type="button"
-                  onClick={() => onRegionSelect(region.id)}
-                  className={`w-full flex items-center justify-between px-4 py-3.5 rounded-lg transition-all duration-200 ${
-                    isSelected
-                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-xl shadow-teal-900/50 scale-[1.02]'
-                      : 'text-slate-300 hover:bg-slate-800/50 hover:text-white hover:shadow-lg'
-                  }`}
-                >
+                <button key={region.id} type="button" onClick={() => onRegionSelect(region.id)} className={`w-full flex items-center justify-between px-4 py-3.5 rounded-lg transition-all duration-200 ${isSelected ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-xl shadow-teal-900/50 scale-[1.02]' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white hover:shadow-lg'}`}>
                   <div className="flex items-center gap-3">
                     <div className={`size-2.5 rounded-full ${region.color} shadow-lg ${isSelected ? 'ring-2 ring-white/80' : 'ring-1 ring-white/20'}`} />
                     <span className="text-sm font-semibold">{region.name}</span>
                   </div>
-                  <Badge variant="secondary" className={`text-xs font-bold border-0 ${isSelected ? 'bg-white/90 text-teal-700' : 'bg-slate-700/50 text-slate-300'}`}>
-                    {region.count}
-                  </Badge>
+                  <Badge variant="secondary" className={`text-xs font-bold border-0 ${isSelected ? 'bg-white/90 text-teal-700' : 'bg-slate-700/50 text-slate-300'}`}>{region.count}</Badge>
                 </button>
               );
             })}
@@ -109,50 +75,25 @@ export function DashboardSidebar({
           <div className="mt-6">
             <div className="flex items-center justify-between px-3 mb-3">
               <h2 className="text-xs uppercase tracking-wider text-slate-400 font-bold">Filtrar por Tipo</h2>
-              {selectedCategory && <div className="size-2 rounded-full bg-purple-400 animate-pulse shadow-lg shadow-purple-400/50" />}
             </div>
             <div className="space-y-1.5">
-              {categoryCounts.map((category) => {
-                // Puxamos o componente de ícone para renderizar!
-                const IconComponent = category.icon;
-                return (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => onCategorySelect(selectedCategory === category.id ? null : category.id)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${
-                      selectedCategory === category.id
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl shadow-purple-900/50 scale-[1.02]'
-                        : 'text-slate-300 hover:bg-slate-800/50 hover:text-white hover:shadow-lg'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* O ÍCONE ENTRA AQUI: Renderizado como componente React */}
-                      <IconComponent className={`size-4 ${selectedCategory === category.id ? 'text-white' : category.color}`} />
-                      <span className="text-sm font-semibold">{category.label}</span>
-                    </div>
-                    <Badge variant="secondary" className={`text-xs font-bold border-0 ${selectedCategory === category.id ? 'bg-white/90 text-purple-700' : 'bg-slate-700/50 text-slate-300'}`}>
-                      {category.count}
-                    </Badge>
-                  </button>
-                );
-              })}
+              {categoryCounts.map((category) => (
+                <button key={category.id} type="button" onClick={() => onCategorySelect(selectedCategory === category.id ? null : category.id)} className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${selectedCategory === category.id ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl shadow-purple-900/50 scale-[1.02]' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white hover:shadow-lg'}`}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg leading-none">{category.icon}</span>
+                    <span className="text-sm font-semibold">{category.label}</span>
+                  </div>
+                  <Badge variant="secondary" className={`text-xs font-bold border-0 ${selectedCategory === category.id ? 'bg-white/90 text-purple-700' : 'bg-slate-700/50 text-slate-300'}`}>{category.count}</Badge>
+                </button>
+              ))}
             </div>
           </div>
         )}
 
         {(selectedRegion || selectedCategory) && (
           <div className="mt-4">
-            <button
-              type="button"
-              onClick={() => {
-                onRegionSelect('');
-                if (onCategorySelect) onCategorySelect(null);
-              }}
-              className="w-full px-4 py-2.5 bg-red-600/20 hover:bg-red-600/30 text-red-300 hover:text-red-200 rounded-lg border border-red-500/30 transition-all duration-200 text-sm font-semibold flex items-center justify-center gap-2"
-            >
-              <span>✕</span>
-              <span>Limpar Filtros</span>
+            <button type="button" onClick={() => { onRegionSelect(''); if (onCategorySelect) onCategorySelect(null); }} className="w-full px-4 py-2.5 bg-red-600/20 hover:bg-red-600/30 text-red-300 hover:text-red-200 rounded-lg border border-red-500/30 transition-all duration-200 text-sm font-semibold flex items-center justify-center gap-2">
+              <span>✕</span><span>Limpar Filtros</span>
             </button>
           </div>
         )}
@@ -160,31 +101,12 @@ export function DashboardSidebar({
         <div className="mt-6 relative group">
           <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 to-emerald-500/10 blur-xl rounded-2xl group-hover:blur-2xl transition-all duration-300" />
           <div className="relative p-5 bg-gradient-to-br from-teal-600/20 via-emerald-600/20 to-teal-600/20 backdrop-blur-md rounded-2xl border border-teal-500/30 shadow-2xl ring-1 ring-teal-400/20 hover:ring-teal-400/40 transition-all duration-300">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-xs text-teal-300 font-bold uppercase tracking-wider">Total de Locais</div>
-              <div className="size-2 rounded-full bg-teal-400 animate-pulse shadow-lg shadow-teal-400/50" />
-            </div>
-            <div className="text-5xl font-black text-white mb-1 bg-gradient-to-br from-white to-teal-100 bg-clip-text text-transparent">
-              {totalCount}
-            </div>
-            <div className="text-xs text-slate-400 mb-3 font-medium">
-              {totalCount === 0 ? 'Nenhum ponto mapeado' : totalCount === 1 ? 'Ponto mapeado' : 'Pontos mapeados'}
-            </div>
-            <div className="relative h-2 bg-slate-800/50 rounded-full overflow-hidden ring-1 ring-slate-700/50">
-              <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-emerald-500/20 blur-sm" />
-              <div className="relative h-full bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-400 rounded-full shadow-lg shadow-teal-500/50 animate-pulse" style={{
-                width: totalCount > 0 ? `${Math.min((totalCount / 100) * 100, 100)}%` : '0%',
-                animationDuration: '3s'
-              }} />
-            </div>
+            <div className="flex items-center justify-between mb-3"><div className="text-xs text-teal-300 font-bold uppercase tracking-wider">Total de Locais</div></div>
+            <div className="text-5xl font-black text-white mb-1 bg-gradient-to-br from-white to-teal-100 bg-clip-text text-transparent">{totalCount}</div>
+            <div className="text-xs text-slate-400 mb-3 font-medium">{totalCount === 0 ? 'Nenhum ponto mapeado' : totalCount === 1 ? 'Ponto mapeado' : 'Pontos mapeados'}</div>
           </div>
         </div>
       </nav>
-      <div className="relative p-4 border-t border-white/5 bg-black/20">
-        <div className="text-xs text-slate-500">
-          Última atualização: {new Date().toLocaleDateString('pt-BR')}
-        </div>
-      </div>
     </div>
   );
 }
