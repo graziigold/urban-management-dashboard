@@ -18,7 +18,6 @@ import { GaleriaVistoria } from './components/GaleriaVistoria';
 const SUPABASE_PROJECT_ID = "kqrmsxhmbjzwjnxhfnap";
 const ANON_KEY = "sb_publishable_DQm7g2O-m4BohGzHD3npfQ_NJd6SBxj";
 
-// Ponte leve ajustada para o Storage funcionar perfeitamente via rota de API dedicada
 const supabase = {
   storage: {
     from: (bucketName: string) => ({
@@ -48,7 +47,6 @@ const supabase = {
   }
 };
 
-// Converter Location (backend) para MapMarker (frontend) - BLINDADO
 function locationToMarker(location: Location): MapMarker {
   if (!location) {
     return { id: 'erro', lat: 0, lng: 0, status: 'success', title: 'Inválido', region: 'central', category: 'outro' };
@@ -78,7 +76,6 @@ export default function App() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ── FILTRO DA BUSCA COMPLETAMENTE BLINDADO CONTRA TELA BRANCA (COM COORDENADAS) ──
   const markers = useMemo(() => {
     if (!locations || !Array.isArray(locations)) return [];
 
@@ -111,10 +108,10 @@ export default function App() {
   const [formCategory, setFormCategory] = useState<LocationCategory>('outro');
   const [formStatus, setFormStatus] = useState<'critical' | 'warning' | 'success'>('success');
   const [formRegion, setFormRegion] = useState<string>('central');
+  const [formIsUrgent, setFormIsUrgent] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
 
   useEffect(() => {
-    console.log('🚀 App montado - carregando locais...');
     loadLocations();
   }, []);
 
@@ -141,6 +138,7 @@ export default function App() {
       setFormCategory(location.category);
       setFormStatus(location.status);
       setFormRegion(location.region);
+      setFormIsUrgent(location.isUrgent || false);
       setUploadedImages(location.images || []);
     }
   };
@@ -151,9 +149,9 @@ export default function App() {
     setFormCategory('outro');
     setFormStatus('success');
     setFormRegion('central');
+    setFormIsUrgent(false);
   };
 
-  // ── SNAP-UPLOAD PARA O STORAGE (PROTEGIDO CONTRA TRAVAMENTOS) ──
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -215,6 +213,7 @@ export default function App() {
         description: formData.description,
         address: formData.address,
         seiProcess: formData.seiProcess,
+        isUrgent: formIsUrgent,
         images: uploadedImages,
       });
 
@@ -225,6 +224,7 @@ export default function App() {
       setFormCategory('outro');
       setFormStatus('success');
       setFormRegion('central');
+      setFormIsUrgent(false);
     } catch (error) {
       console.error('Erro ao salvar local:', error);
       alert('Erro ao salvar o local. Tente novamente.');
@@ -248,6 +248,7 @@ export default function App() {
         status: formStatus,
         region: formRegion,
         category: formCategory,
+        isUrgent: formIsUrgent,
         images: uploadedImages,
       });
 
@@ -257,6 +258,7 @@ export default function App() {
       setFormCategory('outro');
       setFormStatus('success');
       setFormRegion('central');
+      setFormIsUrgent(false);
     } catch (error) {
       console.error('Erro ao atualizar local:', error);
       alert('Erro ao atualizar o local. Tente novamente.');
@@ -278,6 +280,7 @@ export default function App() {
       setFormCategory('outro');
       setFormStatus('success');
       setFormRegion('central');
+      setFormIsUrgent(false);
     } catch (error) {
       console.error('Erro ao deletar local:', error);
       alert('Erro ao deletar o local. Tente novamente.');
@@ -369,7 +372,6 @@ export default function App() {
         {/* Container do Mapa com Barra de Pesquisa */}
         <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl md:rounded-2xl overflow-hidden shadow-xl mt-16 md:mt-0 relative flex flex-col">
           
-          {/* 🔍 BARRA DE PESQUISA FLUTUANTE (DARK GLASSMORPHISM + FILTRO DE LAT/LONG ATIVO) */}
           <div className="absolute top-4 left-4 z-20 w-72 md:w-85 max-w-[calc(100%-2rem)]">
             <div className="relative shadow-xl rounded-xl overflow-hidden border border-slate-700/40 bg-slate-900/85 backdrop-blur-md transition-all duration-300 focus-within:border-emerald-500/60 focus-within:ring-1 focus-within:ring-emerald-500/30">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
@@ -405,7 +407,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* New Marker Dialog */}
+      {/* MODAL CADASTRAR NOVO */}
       <Dialog open={!!newMarkerCoords} onOpenChange={(open) => {
         if (!open) {
           setNewMarkerCoords(null);
@@ -414,6 +416,7 @@ export default function App() {
           setFormCategory('outro');
           setFormStatus('success');
           setFormRegion('central');
+          setFormIsUrgent(false);
         }
       }}>
         <DialogContent className="sm:max-w-[500px]">
@@ -452,13 +455,25 @@ export default function App() {
               <Select value={formCategory} onValueChange={(value) => setFormCategory(value as LocationCategory)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      <span className="flex items-center gap-2"><span>{cat.icon}</span><span>{cat.label}</span></span>
-                    </SelectItem>
-                  ))}
+                  {CATEGORIES.map((cat) => {
+                    // RESOLUÇÃO DA TELA BRANCA: Transformar em componente maiúsculo!
+                    const Icon = cat.icon;
+                    return (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        <span className="flex items-center gap-2">
+                          <Icon className={`size-4 ${cat.color}`} />
+                          <span>{cat.label}</span>
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-red-50/50 border border-red-200 rounded-lg mt-2">
+              <input type="checkbox" id="isUrgent" checked={formIsUrgent} onChange={(e) => setFormIsUrgent(e.target.checked)} className="size-4 rounded border-red-300 text-red-600 focus:ring-red-600" />
+              <Label htmlFor="isUrgent" className="text-red-700 font-bold cursor-pointer m-0">🚨 Marcar como Demanda Urgente</Label>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -506,37 +521,18 @@ export default function App() {
               <Textarea id="description" name="description" placeholder="Descreva o local..." rows={3} />
             </div>
 
-            {/* Upload de Fotos com o componente Galeria */}
             <div className="space-y-2">
               <Label>Fotos da Vistoria</Label>
-              
               {uploadedImages.length > 0 && (
                 <div className="mb-3">
-                  <GaleriaVistoria 
-                    images={uploadedImages} 
-                    onRemoveImage={handleRemoveImage} 
-                  />
+                  <GaleriaVistoria images={uploadedImages} onRemoveImage={handleRemoveImage} />
                 </div>
               )}
-
-              <label
-                htmlFor="images"
-                className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-                  isUploadingImage ? 'bg-slate-50 border-slate-300 pointer-events-none' : 'hover:border-teal-500 hover:bg-teal-50'
-                }`}
-              >
+              <label htmlFor="images" className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isUploadingImage ? 'bg-slate-50 border-slate-300 pointer-events-none' : 'hover:border-teal-500 hover:bg-teal-50'}`}>
                 {isUploadingImage ? (
-                  <>
-                    <Loader2 className="size-5 text-teal-600 animate-spin" />
-                    <span className="text-sm text-teal-600 font-medium">Subindo foto para o servidor...</span>
-                  </>
+                  <><Loader2 className="size-5 text-teal-600 animate-spin" /><span className="text-sm text-teal-600 font-medium">Subindo foto...</span></>
                 ) : (
-                  <>
-                    <Camera className="size-5 text-slate-500" />
-                    <span className="text-sm text-slate-600 font-medium">
-                      {uploadedImages.length > 0 ? `${uploadedImages.length} foto(s) - Adicionar mais` : 'Adicionar fotos da vistoria'}
-                    </span>
-                  </>
+                  <><Camera className="size-5 text-slate-500" /><span className="text-sm text-slate-600 font-medium">{uploadedImages.length > 0 ? `${uploadedImages.length} foto(s) - Adicionar mais` : 'Adicionar fotos da vistoria'}</span></>
                 )}
               </label>
               <input id="images" type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" disabled={isUploadingImage} />
@@ -552,11 +548,12 @@ export default function App() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Marker Dialog */}
+      {/* MODAL EDITAR LOCAL */}
       <Dialog open={!!editingLocation} onOpenChange={(open) => { if (!open) setEditingLocation(null); }}>
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Edit className="size-5 text-teal-600" /> Editar Local</DialogTitle>
+            <DialogDescription className="sr-only">Atualize as informações deste local.</DialogDescription>
           </DialogHeader>
 
           <form
@@ -582,9 +579,25 @@ export default function App() {
               <Select value={formCategory} onValueChange={(value) => setFormCategory(value as LocationCategory)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (<SelectItem key={cat.id} value={cat.id}><span className="flex items-center gap-2"><span>{cat.icon}</span><span>{cat.label}</span></span></SelectItem>))}
+                  {CATEGORIES.map((cat) => {
+                    // RESOLUÇÃO DA TELA BRANCA: Transformar em componente maiúsculo!
+                    const Icon = cat.icon;
+                    return (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        <span className="flex items-center gap-2">
+                          <Icon className={`size-4 ${cat.color}`} />
+                          <span>{cat.label}</span>
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-red-50/50 border border-red-200 rounded-lg mt-2">
+              <input type="checkbox" id="edit-isUrgent" checked={formIsUrgent} onChange={(e) => setFormIsUrgent(e.target.checked)} className="size-4 rounded border-red-300 text-red-600 focus:ring-red-600" />
+              <Label htmlFor="edit-isUrgent" className="text-red-700 font-bold cursor-pointer m-0">🚨 Marcar como Demanda Urgente</Label>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -632,37 +645,18 @@ export default function App() {
               <Textarea id="edit-description" name="description" defaultValue={editingLocation?.description} rows={3} />
             </div>
 
-            {/* Upload de Fotos na Edição com o componente Galeria */}
             <div className="space-y-2">
               <Label>Fotos da Vistoria</Label>
-              
               {uploadedImages.length > 0 && (
                 <div className="mb-3">
-                  <GaleriaVistoria 
-                    images={uploadedImages} 
-                    onRemoveImage={handleRemoveImage} 
-                  />
+                  <GaleriaVistoria images={uploadedImages} onRemoveImage={handleRemoveImage} />
                 </div>
               )}
-
-              <label
-                htmlFor="edit-images"
-                className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-                  isUploadingImage ? 'bg-slate-50 border-slate-300 pointer-events-none' : 'hover:border-teal-500 hover:bg-teal-50'
-                }`}
-              >
+              <label htmlFor="edit-images" className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isUploadingImage ? 'bg-slate-50 border-slate-300 pointer-events-none' : 'hover:border-teal-500 hover:bg-teal-50'}`}>
                 {isUploadingImage ? (
-                  <>
-                    <Loader2 className="size-5 text-teal-600 animate-spin" />
-                    <span className="text-sm text-teal-600 font-medium">Subindo foto para o servidor...</span>
-                  </>
+                  <><Loader2 className="size-5 text-teal-600 animate-spin" /><span className="text-sm text-teal-600 font-medium">Subindo foto...</span></>
                 ) : (
-                  <>
-                    <Camera className="size-5 text-slate-500" />
-                    <span className="text-sm text-slate-600 font-medium">
-                      {uploadedImages.length > 0 ? `${uploadedImages.length} foto(s) - Adicionar mais` : 'Adicionar fotos da vistoria'}
-                    </span>
-                  </>
+                  <><Camera className="size-5 text-slate-500" /><span className="text-sm text-slate-600 font-medium">{uploadedImages.length > 0 ? `${uploadedImages.length} foto(s) - Adicionar mais` : 'Adicionar fotos da vistoria'}</span></>
                 )}
               </label>
               <input id="edit-images" type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" disabled={isUploadingImage} />
