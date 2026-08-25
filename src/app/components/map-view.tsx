@@ -19,6 +19,7 @@ interface MapViewProps {
   editMode?: boolean;
   onAddMarker?: (lat: number, lng: number) => void;
   allLocations?: any[];
+  targetLocation?: { lat: number; lng: number } | null;
 }
 
 // 🛡️ Validador blindado para unificar IDs e nomes das regiões sem divergência
@@ -50,7 +51,8 @@ export function MapView({
   selectedCategory,
   editMode = false,
   onAddMarker,
-  allLocations = []
+  allLocations = [],
+  targetLocation
 }: MapViewProps) {
   // Filtrar marcadores usando o validador unificado
   let filteredMarkers = markers;
@@ -80,6 +82,7 @@ export function MapView({
           selectedRegion={selectedRegion}
           editMode={editMode}
           onAddMarker={onAddMarker}
+          targetLocation={targetLocation}
         />
       </div>
 
