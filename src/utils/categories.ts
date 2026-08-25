@@ -1,3 +1,5 @@
+import { createElement } from 'react';
+import type { ElementType } from 'react';
 import { 
   Dumbbell, 
   Trophy, 
@@ -10,21 +12,31 @@ import {
   MapPin 
 } from 'lucide-react';
 import type { LocationCategory } from './api/locations';
-import type { ElementType } from 'react';
 
-// escorregador
-const SlideIcon = ({ size = 24, color = "currentColor", strokeWidth = 2, className = "" }: any) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M5 22V4" />
-    <path d="M5 18H2" />
-    <path d="M5 14H2" />
-    <path d="M5 10H2" />
-    <path d="M5 6H2" />
-    <path d="M5 4h2" />
-    <path d="M7 4 C 10 4 11 6 13 10 L 17 18 C 18 20 19 20 22 20" />
-    <path d="M15 14v8" />
-  </svg>
-);
+// Escorregador (Seguro para Vercel - sem quebrar o .ts!)
+const SlideIcon = ({ size = 24, color = "currentColor", strokeWidth = 2, className = "" }: any) => {
+  return createElement('svg', {
+    xmlns: "http://www.w3.org/2000/svg",
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: color,
+    strokeWidth: strokeWidth,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    className: className
+  },
+    createElement('path', { d: "M5 22V4" }),
+    createElement('path', { d: "M5 18H2" }),
+    createElement('path', { d: "M5 14H2" }),
+    createElement('path', { d: "M5 10H2" }),
+    createElement('path', { d: "M5 6H2" }),
+    createElement('path', { d: "M5 4h2" }),
+    createElement('path', { d: "M7 4 C 10 4 11 6 13 10 L 17 18 C 18 20 19 20 22 20" }),
+    createElement('path', { d: "M15 14v8" })
+  );
+};
 
 export interface CategoryInfo {
   id: LocationCategory;
