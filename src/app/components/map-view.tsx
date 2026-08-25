@@ -18,6 +18,7 @@ interface MapViewProps {
   selectedCategory?: LocationCategory | null;
   editMode?: boolean;
   onAddMarker?: (lat: number, lng: number) => void;
+  allLocations?: any[]; // <-- Adicionamos a lista bruta opcional para contagem exata
 }
 
 export function MapView({
@@ -26,9 +27,10 @@ export function MapView({
   selectedRegion,
   selectedCategory,
   editMode = false,
-  onAddMarker
+  onAddMarker,
+  allLocations = []
 }: MapViewProps) {
-  // Filtrar por região e categoria
+  // Filtrar por região e categoria para os pins do mapa
   let filteredMarkers = markers;
 
   if (selectedRegion) {
@@ -38,6 +40,11 @@ export function MapView({
   if (selectedCategory) {
     filteredMarkers = filteredMarkers.filter((m) => m.category === selectedCategory);
   }
+
+  // Contagem exata para o badge do topo (considerando a região bruta do banco)
+  const exactRegionCount = selectedRegion 
+    ? (allLocations.length > 0 ? allLocations.filter(l => l && l.region === selectedRegion).length : filteredMarkers.length)
+    : filteredMarkers.length;
 
   return (
     <div className="relative h-full bg-gray-100 overflow-hidden">
@@ -67,7 +74,7 @@ export function MapView({
               {selectedRegion === 'polo-jk' && 'Polo JK'}
             </span>
             <span className="text-xs opacity-70">
-              ({filteredMarkers.length} {filteredMarkers.length === 1 ? 'local' : 'locais'})
+              ({exactRegionCount} {exactRegionCount === 1 ? 'local' : 'locais'})
             </span>
           </div>
         </div>
