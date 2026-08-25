@@ -104,7 +104,7 @@ export function MapboxMap({
     map.current.setStyle(style);
   }, [mapStyle]);
 
-  // Atualizar marcadores com ÍCONES BRANCOS da Lucide
+  // Atualizar marcadores: APENAS O ÍCONE (SEM BOLINHA DE FUNDO)
   useEffect(() => {
     if (!map.current) return;
 
@@ -123,28 +123,28 @@ export function MapboxMap({
       if (!marker || marker.lat === undefined || marker.lng === undefined) return;
 
       const categoryInfo = getCategoryInfo(marker.category);
-      const IconComponent = categoryInfo.icon; // Puxa o componente da Lucide (ou nosso escorregador)
+      const IconComponent = categoryInfo.icon; 
 
       const container = document.createElement('div');
       container.className = 'mapbox-custom-marker flex items-center justify-center';
 
-      container.style.width = '32px'; 
-      container.style.height = '32px';
-      container.style.borderRadius = '50%';
+      // Container transparente sem fundo ou borda
+      container.style.width = '36px'; 
+      container.style.height = '36px';
       container.style.display = 'flex';
       container.style.alignItems = 'center';
       container.style.justifyContent = 'center';
+      container.style.cursor = 'pointer';
+      
+      // Sombra dupla para destacar o ícone no mapa de satélite
+      container.style.filter = 'drop-shadow(0px 3px 5px rgba(0, 0, 0, 0.9)) drop-shadow(0px 0px 2px rgba(255, 255, 255, 0.4))';
       
       const currentStatus = marker.status && marker.status in statusColors ? marker.status : 'success';
-      container.style.backgroundColor = statusColors[currentStatus as keyof typeof statusColors];
+      const statusHex = statusColors[currentStatus as keyof typeof statusColors];
 
-      container.style.border = '2.5px solid white';
-      container.style.cursor = 'pointer';
-      container.style.boxShadow = '0 3px 8px rgba(0,0,0,0.5)';
-      
-      // Injeta o ícone usando o React, passando a cor BRANCA!
+      // Injeta o ícone usando o React, passando a COR DA CRITICIDADE direto no ícone!
       const root = createRoot(container);
-      root.render(<IconComponent size={18} color="white" strokeWidth={2.5} />);
+      root.render(<IconComponent size={32} color={statusHex} strokeWidth={2.5} />);
       reactRootsRef.current.push(root);
 
       container.addEventListener('click', (e) => {
