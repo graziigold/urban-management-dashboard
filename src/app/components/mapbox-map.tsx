@@ -11,6 +11,7 @@ interface MapboxMapProps {
   selectedRegion: string | null;
   editMode?: boolean;
   onAddMarker?: (lat: number, lng: number) => void;
+  targetLocation?: { lat: number; lng: number } | null;
 }
 
 const statusColors = {
@@ -22,12 +23,20 @@ const statusColors = {
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2Q4MDQiLCJhIjoiY21wN3JzemY0MDBxdTJyb2d1aGNrcXhlYSJ9.oM7_NV696RQsvcLMzD1ucQ';
 const defaultCenter: [number, number] = [-47.9942, -16.0061];
 
-export function MapboxMap({ markers, onMarkerClick, selectedRegion, editMode = false, onAddMarker }: MapboxMapProps) {
+export function MapboxMap({
+  markers,
+  onMarkerClick,
+  selectedRegion,
+  editMode = false,
+  onAddMarker,
+  targetLocation
+}: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('satellite');
 
+  // Inicialização do Mapbox
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
     mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -42,6 +51,7 @@ export function MapboxMap({ markers, onMarkerClick, selectedRegion, editMode = f
     return () => { map.current?.remove(); map.current = null; };
   }, []);
 
+  // Clique no mapa para modo edição
   useEffect(() => {
     if (!map.current) return;
     const clickHandler = (e: mapboxgl.MapMouseEvent) => {
@@ -51,13 +61,27 @@ export function MapboxMap({ markers, onMarkerClick, selectedRegion, editMode = f
     return () => { map.current?.off('click', clickHandler); };
   }, [editMode, onAddMarker]);
 
+  // Alternar estilo (satélite / ruas)
   useEffect(() => {
     if (!map.current) return;
     const style = mapStyle === 'streets' ? 'mapbox://styles/mapbox/streets-v12' : 'mapbox://styles/mapbox/satellite-streets-v12';
     map.current.setStyle(style);
   }, [mapStyle]);
 
-  // Atualizar marcadores com o visual: Fundo Branco + Borda Colorida + Emoji
+  // Centralização e zoom automático quando uma coordenada/local for pesquisado
+  useEffect(() => {
+    if (!map.current || !targetLocation) return;
+    
+    map.current.flyTo({
+      center: [Number(targetLocation.lng), Number(targetLocation.lat)],
+      zoom: 17.5,
+      pitch: 35,
+      duration: 1800,
+      essential: true,
+    });
+  }, [targetLocation]);
+
+  // Renderizar marcadores com criticidade e ícones
   useEffect(() => {
     if (!map.current) return;
 
@@ -73,7 +97,6 @@ export function MapboxMap({ markers, onMarkerClick, selectedRegion, editMode = f
       const container = document.createElement('div');
       container.className = 'mapbox-custom-marker flex items-center justify-center';
 
-      // Design do Pino: Bolinha branca
       container.style.width = '36px'; 
       container.style.height = '36px';
       container.style.borderRadius = '50%';
@@ -83,15 +106,12 @@ export function MapboxMap({ markers, onMarkerClick, selectedRegion, editMode = f
       container.style.justifyContent = 'center';
       container.style.fontSize = '20px'; 
       
-      // Borda grossa com a cor da criticidade
       const currentStatus = marker.status && marker.status in statusColors ? marker.status : 'success';
       const statusHex = statusColors[currentStatus as keyof typeof statusColors];
       container.style.border = `4px solid ${statusHex}`;
-      
       container.style.cursor = 'pointer';
       container.style.boxShadow = '0 4px 8px rgba(0,0,0,0.5)';
       
-      // Inserir Emoji direto como texto (sem quebrar o React)
       container.innerText = categoryInfo.icon;
 
       container.addEventListener('click', (e) => {
@@ -110,9 +130,11 @@ export function MapboxMap({ markers, onMarkerClick, selectedRegion, editMode = f
     });
   }, [markers, onMarkerClick]);
 
+  // Ajustar limites quando uma região for selecionada
   useEffect(() => {
     if (!map.current) return;
     const validMarkers = Array.isArray(markers) ? markers.filter(m => m && m.lng !== undefined && m.lat !== undefined) : [];
+    
     if (selectedRegion && validMarkers.length > 0) {
       try {
         const bounds = new mapboxgl.LngLatBounds();
@@ -121,17 +143,27 @@ export function MapboxMap({ markers, onMarkerClick, selectedRegion, editMode = f
       } catch (err) {
         console.error('Erro nos limites do mapa:', err);
       }
-    } else {
+    } else if (!targetLocation) {
       map.current.flyTo({ center: defaultCenter, zoom: 14, duration: 1000 });
     }
   }, [selectedRegion, markers]);
 
   return (
     <div className="relative w-full h-full">
-      <button type="button" onClick={() => setMapStyle((prev) => prev === 'streets' ? 'satellite' : 'streets')} className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur text-white px-4 py-2 rounded font-medium shadow-md hover:bg-slate-900 transition-colors">
-        {mapStyle === 'streets' ? 'Modo Satélite' : 'Modo Mapa'}
+      <button 
+        type="button" 
+        onClick={() => setMapStyle((prev) => prev === 'streets' ? 'satellite' : 'streets')} 
+        className="absolute top-4 right-4 z-10 bg-slate-900/90 backdrop-blur text-white text-xs px-3.5 py-2 rounded-xl font-semibold border border-slate-700 shadow-xl hover:bg-slate-800 transition-colors"
+      >
+        {mapStyle === 'streets' ? '🛰️ Modo Satélite' : '🗺️ Modo Mapa'}
       </button>
-      {editMode && <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-teal-600 text-white px-4 py-2 rounded-full font-medium shadow-lg shadow-teal-900/50 animate-pulse border border-teal-400">📍 Clique no mapa para adicionar</div>}
+
+      {editMode && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-teal-600 text-white px-4 py-2 rounded-full font-medium shadow-lg shadow-teal-900/50 animate-pulse border border-teal-400">
+          📍 Clique no mapa para adicionar
+        </div>
+      )}
+
       <div ref={mapContainer} className="w-full h-full" />
     </div>
   );
