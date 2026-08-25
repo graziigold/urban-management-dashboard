@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Edit, Menu, X, MapPin, Save, Camera, Trash2, Loader2, Search } from 'lucide-react';
+import { Edit, Menu, X, MapPin, Save, Camera, Trash2, Loader2, Search, LogOut } from 'lucide-react';
 import { DashboardSidebar } from './components/dashboard-sidebar';
 import { MapView, MapMarker } from './components/map-view';
 import { ExportMenu } from './components/export-menu';
@@ -13,8 +13,8 @@ import { Textarea } from './components/ui/textarea';
 import { getAllLocations, createLocation, updateLocation, deleteLocation, type Location, type LocationCategory } from '../utils/api/locations';
 import { CATEGORIES } from '../utils/categories';
 import { GaleriaVistoria } from './components/GaleriaVistoria';
+import { Login } from './components/Login';
 
-// ── CONFIGURAÇÃO AUTENTICADA E SINCRONIZADA DO GEOPARQUES SM ──
 const SUPABASE_PROJECT_ID = "kqrmsxhmbjzwjnxhfnap";
 const ANON_KEY = "sb_publishable_DQm7g2O-m4BohGzHD3npfQ_NJd6SBxj";
 
@@ -63,6 +63,8 @@ function locationToMarker(location: Location): MapMarker {
 }
 
 export default function App() {
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<LocationCategory | null>(null);
   const [mapEditMode, setMapEditMode] = useState(false);
@@ -75,6 +77,23 @@ export default function App() {
 
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Verifica se o usuário já está logado ao carregar a página
+  useEffect(() => {
+    const token = localStorage.getItem('geoparques_token');
+    const user = localStorage.getItem('geoparques_user');
+    if (token) {
+      setAuthToken(token);
+      setCurrentUser(user);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('geoparques_token');
+    localStorage.removeItem('geoparques_user');
+    setAuthToken(null);
+    setCurrentUser(null);
+  };
 
   const markers = useMemo(() => {
     if (!locations || !Array.isArray(locations)) return [];
@@ -112,8 +131,10 @@ export default function App() {
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
 
   useEffect(() => {
-    loadLocations();
-  }, []);
+    if (authToken) {
+      loadLocations();
+    }
+  }, [authToken]);
 
   async function loadLocations() {
     try {
@@ -287,6 +308,11 @@ export default function App() {
     }
   };
 
+  // Se não estiver autenticado, exibe a tela de login
+  if (!authToken) {
+    return <Login onLoginSuccess={(token, user) => { setAuthToken(token); setCurrentUser(user); }} />;
+  }
+
   if (isLoading && markers.length === 0) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-gray-50 overflow-hidden">
@@ -366,6 +392,17 @@ export default function App() {
           >
             {mapEditMode ? <X className="size-4 md:mr-2" /> : <MapPin className="size-4 md:mr-2" />}
             <span className="hidden md:inline">{mapEditMode ? 'Cancelar' : 'Adicionar Pins'}</span>
+          </Button>
+
+          {/* Botão de Logout */}
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            title={`Logado como: ${currentUser || 'Usuário'}`}
+            className="bg-slate-900/95 backdrop-blur-md text-slate-300 hover:text-white border-2 border-slate-700 hover:border-red-500/50 hover:bg-red-950/20 transition-all shadow-lg"
+            size="icon"
+          >
+            <LogOut className="size-4 text-red-400" />
           </Button>
         </div>
 
