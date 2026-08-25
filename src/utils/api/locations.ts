@@ -27,6 +27,7 @@ export interface Location {
   address: string;
   seiProcess: string;
   images: string[];
+  isUrgent: boolean; // <-- Adicionado aqui
   createdAt: string;
   updatedAt: string;
 }
@@ -42,6 +43,7 @@ export interface CreateLocationInput {
   address?: string;
   seiProcess?: string;
   images?: string[];
+  isUrgent?: boolean; // <-- Adicionado aqui
 }
 
 // Headers nativos do Supabase
@@ -63,8 +65,14 @@ export async function getAllLocations(): Promise<Location[]> {
 
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
-    // O Supabase já devolve a array direto
-    return await response.json();
+    const data = await response.json();
+    
+    // Mapeia garantindo o suporte ao campo de urgência (seja camelCase ou snake_case)
+    return (data || []).map((item: any) => ({
+      ...item,
+      isUrgent: item.isUrgent ?? item.is_urgent ?? false,
+      seiProcess: item.seiProcess ?? item.sei_process ?? '',
+    }));
   } catch (error) {
     console.error('Error fetching locations:', error);
     throw error;
@@ -80,7 +88,12 @@ export async function getLocationById(id: string): Promise<Location> {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
     const data = await response.json();
-    return data[0];
+    const item = data[0];
+    return {
+      ...item,
+      isUrgent: item.isUrgent ?? item.is_urgent ?? false,
+      seiProcess: item.seiProcess ?? item.sei_process ?? '',
+    };
   } catch (error) {
     console.error('Error fetching location:', error);
     throw error;
@@ -93,20 +106,28 @@ export async function createLocation(input: CreateLocationInput): Promise<Locati
     const response = await fetch(API_BASE, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        ...input,
+        isUrgent: input.isUrgent ?? false
+      }),
     });
 
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
     const data = await response.json();
-    return data[0];
+    const item = data[0];
+    return {
+      ...item,
+      isUrgent: item.isUrgent ?? item.is_urgent ?? false,
+      seiProcess: item.seiProcess ?? item.sei_process ?? '',
+    };
   } catch (error) {
     console.error('Error creating location:', error);
     throw error;
   }
 }
 
-// PATCH /locations/:id - Atualizar (O Supabase usa PATCH para atualizar trechos)
+// PATCH /locations/:id - Atualizar
 export async function updateLocation(id: string, updates: Partial<CreateLocationInput>): Promise<Location> {
   try {
     const response = await fetch(`${API_BASE}?id=eq.${id}`, {
@@ -121,7 +142,12 @@ export async function updateLocation(id: string, updates: Partial<CreateLocation
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
     const data = await response.json();
-    return data[0];
+    const item = data[0];
+    return {
+      ...item,
+      isUrgent: item.isUrgent ?? item.is_urgent ?? false,
+      seiProcess: item.seiProcess ?? item.sei_process ?? '',
+    };
   } catch (error) {
     console.error('Error updating location:', error);
     throw error;
