@@ -10,22 +10,121 @@ import {
 } from './ui/dropdown-menu';
 import { exportToCSV, exportToExcel, exportToJSON } from './export-utils';
 import type { MapMarker } from './map-view';
+import type { Location } from '../utils/api/locations';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface ExportMenuProps {
   markers: MapMarker[];
-  siteData: any[];
+  siteData: Location[];
   selectedRegion: string | null;
 }
 
 export function ExportMenu({ markers, siteData, selectedRegion }: ExportMenuProps) {
   const [isExporting, setIsExporting] = useState(false);
 
-  // Garante que o filtro não quebre caso a listagem venha vazia ou nula temporariamente
   const safeMarkers = Array.isArray(markers) ? markers : [];
 
   const filteredMarkers = selectedRegion
     ? safeMarkers.filter((m) => m && (m.region === selectedRegion || getRegionText(m.region) === selectedRegion))
     : safeMarkers;
+
+  // ── GERADOR DE PDF PROFISSIONAL DE URGÊNCIAS ──
+  const exportUrgentPDF = () => {
+    // Pega apenas os locais marcados como urgentes na base de dados
+    const urgentData = (siteData || []).filter(loc => loc && loc.isUrgent);
+
+    if (urgentData.length === 0) {
+      alert('Nenhuma demanda urgente cadastrada no momento! 🎉');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // ── CABEÇALHO INSTITUCIONAL ──
+    doc.setFillColor(15, 23, 42); // Slate 900
+    doc.rect(0, 0, pageWidth, 28, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.text('GEOPARQUES SM — SISTEMA DE GESTÃO URBANA', 14, 12);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(148, 163, 184); // Slate 400
+    doc.text('Santa Maria - DF | Relatório Oficial de Demandas Urgentes', 14, 20);
+
+    // ── SUMÁRIO EXECUTIVO ──
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(51, 65, 85);
+    doc.text('SUMÁRIO EXECUTIVO DE ALERTAS', 14, 38);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 14, 44);
+    doc.text(`Total de Ocorrências Críticas / Urgentes: ${urgentData.length}`, 14, 50);
+
+    // ── TABELA DE DADOS ──
+    const tableRows = urgentData.map((loc, index) => [
+      index + 1,
+      loc.title || 'Sem título',
+      (loc.category || 'Outro').toUpperCase(),
+      (loc.region || 'Geral').toUpperCase(),
+      loc.address || 'Endereço não informado',
+      loc.seiProcess || 'Não vinculado'
+    ]);
+
+    autoTable(doc, {
+      startY: 56,
+      head: [['#', 'Equipamento / Local', 'Categoria', 'Região', 'Endereço', 'Processo SEI']],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [220, 38, 38], // Vermelho de alerta
+        textColor: 255,
+        fontStyle: 'bold',
+        halign: 'center',
+        fontSize: 9
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        1: { cellWidth: 42, fontStyle: 'bold' },
+        2: { cellWidth: 32 },
+        3: { cellWidth: 28 },
+        4: { cellWidth: 45 },
+        5: { cellWidth: 33 }
+      },
+      alternateRowStyles: {
+        fillColor: [254, 242, 242] // Vermelho clarinho alternado
+      },
+      styles: {
+        fontSize: 8.5,
+        cellPadding: 3.5,
+        textColor: [30, 41, 59]
+      },
+    });
+
+    // ── RODAPÉ DAS PÁGINAS ──
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(
+        `Página ${i} de ${pageCount} — Gerado pelo Sistema GeoParques SM`,
+        pageWidth / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: 'center' }
+      );
+    }
+
+    doc.save(`Relatorio_Urgencias_GeoParques_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
 
   const handleExport = (format: 'csv' | 'excel' | 'json') => {
     setIsExporting(true);
@@ -51,8 +150,6 @@ export function ExportMenu({ markers, siteData, selectedRegion }: ExportMenuProp
 
   function getRegionText(region: string | null | undefined): string {
     if (!region) return 'Geral';
-    
-    // Mapeamento idêntico ao banco do Supabase e ao arquivo de mapas regionais
     const names: Record<string, string> = {
       norte: 'Santa Maria Norte',
       'Santa Maria Norte': 'Santa Maria Norte',
@@ -87,13 +184,26 @@ export function ExportMenu({ markers, siteData, selectedRegion }: ExportMenuProp
           <ChevronDown className="size-4 ml-2 opacity-70" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64 bg-slate-900/98 backdrop-blur-xl border-2 border-teal-500/30 shadow-2xl ring-1 ring-teal-400/20">
+      
+      <DropdownMenuContent align="end" className="w-68 bg-slate-900/98 backdrop-blur-xl border-2 border-teal-500/30 shadow-2xl ring-1 ring-teal-400/20 z-50">
         <div className="px-3 py-2 border-b border-teal-500/20">
           <p className="text-xs text-slate-400 font-semibold">
             Exportar {filteredMarkers.length} {filteredMarkers.length === 1 ? 'local' : 'locais'}
             {regionText}
           </p>
         </div>
+
+        {/* 🚨 NOVO ITEM: RELATÓRIO DE URGÊNCIAS EM PDF */}
+        <DropdownMenuItem
+          onClick={exportUrgentPDF}
+          className="cursor-pointer py-3 hover:bg-red-950/40 text-slate-200 focus:bg-red-950/40 focus:text-white border-b border-slate-800"
+        >
+          <FileText className="size-4 mr-3 text-red-500" />
+          <div className="flex-1">
+            <div className="font-semibold text-sm text-red-400">Relatório Urgentes (.pdf)</div>
+            <div className="text-xs text-slate-400">Tabela estilizada com alertas críticos</div>
+          </div>
+        </DropdownMenuItem>
 
         <DropdownMenuItem
           onClick={() => handleExport('excel')}
