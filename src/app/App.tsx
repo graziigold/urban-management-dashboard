@@ -14,7 +14,6 @@ import { getAllLocations, createLocation, updateLocation, deleteLocation, type L
 import { CATEGORIES } from '../utils/categories';
 import { GaleriaVistoria } from './components/GaleriaVistoria';
 
-// ── CONFIGURAÇÃO AUTENTICADA E SINCRONIZADA DO GEOPARQUES SM ──
 const SUPABASE_PROJECT_ID = "kqrmsxhmbjzwjnxhfnap";
 const ANON_KEY = "sb_publishable_DQm7g2O-m4BohGzHD3npfQ_NJd6SBxj";
 
@@ -455,18 +454,15 @@ export default function App() {
               <Select value={formCategory} onValueChange={(value) => setFormCategory(value as LocationCategory)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => {
-                    // RESOLUÇÃO DA TELA BRANCA: Transformar em componente maiúsculo!
-                    const Icon = cat.icon;
-                    return (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        <span className="flex items-center gap-2">
-                          <Icon className={`size-4 ${cat.color}`} />
-                          <span>{cat.label}</span>
-                        </span>
-                      </SelectItem>
-                    );
-                  })}
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <span className="flex items-center gap-2">
+                        {/* Agora o ícone é renderizado simplesmente como texto/emoji */}
+                        <span className="text-base">{cat.icon}</span>
+                        <span>{cat.label}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -579,18 +575,15 @@ export default function App() {
               <Select value={formCategory} onValueChange={(value) => setFormCategory(value as LocationCategory)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => {
-                    // RESOLUÇÃO DA TELA BRANCA: Transformar em componente maiúsculo!
-                    const Icon = cat.icon;
-                    return (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        <span className="flex items-center gap-2">
-                          <Icon className={`size-4 ${cat.color}`} />
-                          <span>{cat.label}</span>
-                        </span>
-                      </SelectItem>
-                    );
-                  })}
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <span className="flex items-center gap-2">
+                        {/* Agora o ícone é renderizado simplesmente como texto/emoji */}
+                        <span className="text-base">{cat.icon}</span>
+                        <span>{cat.label}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
