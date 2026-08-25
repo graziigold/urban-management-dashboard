@@ -4,6 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import '../../styles/mapbox-custom.css';
 import type { MapMarker } from './map-view';
 import { getCategoryInfo } from '../../utils/categories';
+import { createRoot, type Root } from 'react-dom/client';
 
 interface MapboxMapProps {
   markers: MapMarker[];
@@ -13,7 +14,6 @@ interface MapboxMapProps {
   onAddMarker?: (lat: number, lng: number) => void;
 }
 
-// VOLTANDO PARA AS CORES EXATAS DA LEGENDA DO PAINEL
 const statusColors = {
   critical: '#EF4444', // Vermelho (Crítico)
   warning: '#EAB308',  // Amarelo (Atenção)
@@ -37,6 +37,10 @@ export function MapboxMap({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  
+  // Guardamos as instâncias do React Root para limpar a memória depois
+  const reactRootsRef = useRef<Root[]>([]);
+  
   const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>(
     'satellite'
   );
@@ -100,15 +104,18 @@ export function MapboxMap({
     map.current.setStyle(style);
   }, [mapStyle]);
 
-  // Atualizar marcadores com emojis e cores de status (FIXOS)
+  // Atualizar marcadores com ÍCONES BRANCOS da Lucide
   useEffect(() => {
     if (!map.current) return;
 
-    // Limpa marcadores anteriores
+    // Limpa marcadores anteriores e desmonta as raízes do React
     markersRef.current.forEach((m) => {
       if (m) m.remove();
     });
     markersRef.current = [];
+
+    reactRootsRef.current.forEach((root) => { root.unmount(); });
+    reactRootsRef.current = [];
 
     if (!Array.isArray(markers)) return;
 
@@ -116,6 +123,7 @@ export function MapboxMap({
       if (!marker || marker.lat === undefined || marker.lng === undefined) return;
 
       const categoryInfo = getCategoryInfo(marker.category);
+      const IconComponent = categoryInfo.icon; // Puxa o componente da Lucide (ou nosso escorregador)
 
       const container = document.createElement('div');
       container.className = 'mapbox-custom-marker flex items-center justify-center';
@@ -126,7 +134,6 @@ export function MapboxMap({
       container.style.display = 'flex';
       container.style.alignItems = 'center';
       container.style.justifyContent = 'center';
-      container.style.fontSize = '16px'; 
       
       const currentStatus = marker.status && marker.status in statusColors ? marker.status : 'success';
       container.style.backgroundColor = statusColors[currentStatus as keyof typeof statusColors];
@@ -135,7 +142,10 @@ export function MapboxMap({
       container.style.cursor = 'pointer';
       container.style.boxShadow = '0 3px 8px rgba(0,0,0,0.5)';
       
-      container.innerText = categoryInfo.icon;
+      // Injeta o ícone usando o React, passando a cor BRANCA!
+      const root = createRoot(container);
+      root.render(<IconComponent size={18} color="white" strokeWidth={2.5} />);
+      reactRootsRef.current.push(root);
 
       container.addEventListener('click', (e) => {
         e.stopPropagation();
